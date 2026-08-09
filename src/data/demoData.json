@@ -1,0 +1,1507 @@
+{
+  "equipment": [
+    {
+      "id": "acc-思芒爍影-項鍊",
+      "name": "思芒爍影 項鍊",
+      "set": "思芒爍影",
+      "slot": "項鍊",
+      "stats": {
+        "normalAttackDamage": 0.12,
+        "skillDamage": 0.12,
+        "elementalPower": 28.0,
+        "resonanceCharge": 0.05
+      },
+      "statLines": [
+        "普攻傷害 +12.0%",
+        "技能傷害 +12.0%",
+        "全屬性強化 +28.0",
+        "共鳴充能效率 +5.0%"
+      ],
+      "effects": [
+        "「焦灼」：",
+        "-攻擊時將會獲得1點「通盈潛思」能量點數（冷卻時間0.3秒），並獲得1.8%×能量點數的暴擊傷害。"
+      ],
+      "source": "acc set",
+      "demo": true
+    },
+    {
+      "id": "acc-思芒爍影-腕帶",
+      "name": "思芒爍影 腕帶",
+      "set": "思芒爍影",
+      "slot": "腕帶",
+      "stats": {
+        "critRate": 0.06,
+        "critRateMagic": 0.06,
+        "bossDamage": 0.11,
+        "elementalPower": 20.0,
+        "resonanceCharge": 0.05
+      },
+      "statLines": [
+        "物理暴擊率 +6.0%",
+        "魔法暴擊率 +6.0%",
+        "對頭目傷害 +11.0%",
+        "全屬性強化 +20.0",
+        "共鳴充能效率 +5.0%"
+      ],
+      "effects": [
+        "「升格」：",
+        "-攻擊時將會獲得1點「通盈潛思」能量點數（冷卻時間0.3秒），並獲得1.2%×能量點數的傷害提升。"
+      ],
+      "source": "acc set",
+      "demo": true
+    },
+    {
+      "id": "acc-思芒爍影-戒指",
+      "name": "思芒爍影 戒指",
+      "set": "思芒爍影",
+      "slot": "戒指",
+      "stats": {
+        "damageBoost": 0.13,
+        "critDamage": 0.2,
+        "penetration": 0.08,
+        "penetrationMagic": 0.08,
+        "resonanceCharge": 0.05
+      },
+      "statLines": [
+        "傷害提升 +13.0%",
+        "暴擊傷害 +20.0%",
+        "物理穿透 +8.0%",
+        "魔法穿透 +8.0%",
+        "共鳴充能效率 +5.0%"
+      ],
+      "effects": [
+        "「尖銳」：",
+        "-攻擊時將會獲得1點「通盈潛思」能量點數（冷卻時間0.3秒），並獲得1.2%×能量點數的普攻和技能傷害。"
+      ],
+      "source": "acc set",
+      "demo": true
+    },
+    {
+      "id": "acc-思芒爍影-印章",
+      "name": "思芒爍影 印章",
+      "set": "思芒爍影",
+      "slot": "印章",
+      "stats": {
+        "elementalPower": 25.0,
+        "statusDamage": 0.07,
+        "attackPercent": 0.06,
+        "attackPercentMagic": 0.06,
+        "cooldownSpeed": 40.0
+      },
+      "statLines": [
+        "全屬性強化 +25.0",
+        "剋制異常敵人 +7.0%",
+        "物理攻擊力 +6.0%",
+        "魔法攻擊力 +6.0%",
+        "冷卻速度 +40.0"
+      ],
+      "effects": [
+        "「極致」：",
+        "-攻擊時將會獲得1點「通盈潛思」能量點數（冷卻時間0.3秒），並獲得1%×能量點數的對頭目傷害。"
+      ],
+      "source": "acc set",
+      "demo": true
+    },
+    {
+      "id": "acc-思芒爍影-護符",
+      "name": "思芒爍影 護符",
+      "set": "思芒爍影",
+      "slot": "護符",
+      "stats": {
+        "elementalPower": 20.0,
+        "strPercent": 0.12,
+        "intPercent": 0.12,
+        "resonance": 0.08,
+        "cooldownSpeed": 40.0
+      },
+      "statLines": [
+        "全屬性強化 +20.0",
+        "力量 +12.0%",
+        "智力 +12.0%",
+        "共鳴期間傷害 +8.0%",
+        "冷卻速度 +40.0"
+      ],
+      "effects": [
+        "「全然」：",
+        "-攻擊時將會獲得1點「通盈潛思」能量點數（冷卻時間0.3秒），並獲得2.6×能量點數的全屬性強化。"
+      ],
+      "source": "acc set",
+      "demo": true
+    },
+    {
+      "id": "acc-思芒爍影-套裝效果",
+      "name": "思芒爍影 套裝效果",
+      "set": "思芒爍影",
+      "slot": "飾品套裝",
+      "stats": {
+        "damageBoost": 0.12,
+        "skillDamage": 0.15,
+        "normalAttackDamage": 0.15
+      },
+      "statLines": [
+        "傷害提升 +12.0%",
+        "技能傷害 +15.0%",
+        "普攻傷害 +15.0%"
+      ],
+      "effects": [
+        "「行思坐憶」：",
+        "「釋放共鳴」後，接下來10秒內「思芒爍影」套裝下的所有效果將額外增加75%（冷卻時間25秒）。"
+      ],
+      "source": "acc set",
+      "demo": true
+    },
+    {
+      "id": "acc-湮滅崩解-項鍊",
+      "name": "湮滅崩解 項鍊",
+      "set": "湮滅崩解",
+      "slot": "項鍊",
+      "stats": {
+        "elementalPower": 28.0,
+        "bossDamage": 0.12,
+        "normalAttackDamage": 0.14,
+        "skillDamage": 0.14
+      },
+      "statLines": [
+        "全屬性強化 +28.0",
+        "對頭目傷害 +12.0%",
+        "普攻傷害 +14.0%",
+        "技能傷害 +14.0%"
+      ],
+      "effects": [
+        "「恐懼」：",
+        "-當生命值和護盾低於20%，觸發「恐懼」效果，每秒恢復0.5%最大生命值，持續20秒，冷卻時間20秒。"
+      ],
+      "source": "acc set",
+      "demo": true
+    },
+    {
+      "id": "acc-湮滅崩解-腕帶",
+      "name": "湮滅崩解 腕帶",
+      "set": "湮滅崩解",
+      "slot": "腕帶",
+      "stats": {
+        "critRate": 0.06,
+        "critRateMagic": 0.06,
+        "statusDamage": 0.1,
+        "critDamage": 0.18,
+        "bossDamage": 0.14
+      },
+      "statLines": [
+        "物理暴擊率 +6.0%",
+        "魔法暴擊率 +6.0%",
+        "剋制異常敵人 +10.0%",
+        "暴擊傷害 +18.0%",
+        "對頭目傷害 +14.0%"
+      ],
+      "effects": [
+        "「哀傷」：",
+        "-受擊時觸發「哀傷」效果，獲得傷害抵抗15%，持續10秒，冷卻時間10秒。"
+      ],
+      "source": "acc set",
+      "demo": true
+    },
+    {
+      "id": "acc-湮滅崩解-戒指",
+      "name": "湮滅崩解 戒指",
+      "set": "湮滅崩解",
+      "slot": "戒指",
+      "stats": {
+        "damageBoost": 0.15,
+        "critDamage": 0.24,
+        "penetration": 0.08,
+        "penetrationMagic": 0.08
+      },
+      "statLines": [
+        "傷害提升 +15.0%",
+        "暴擊傷害 +24.0%",
+        "物理穿透 +8.0%",
+        "魔法穿透 +8.0%"
+      ],
+      "effects": [
+        "「憤怒」：",
+        "-施放共鳴技能後的下一技能傷害提升20%。"
+      ],
+      "source": "acc set",
+      "demo": true
+    },
+    {
+      "id": "acc-湮滅崩解-印章",
+      "name": "湮滅崩解 印章",
+      "set": "湮滅崩解",
+      "slot": "印章",
+      "stats": {
+        "elementalPower": 26.0,
+        "statusDamage": 0.1,
+        "attackPercent": 0.09,
+        "attackPercentMagic": 0.09
+      },
+      "statLines": [
+        "全屬性強化 +26.0",
+        "剋制異常敵人 +10.0%",
+        "物理攻擊力 +9.0%",
+        "魔法攻擊力 +9.0%"
+      ],
+      "effects": [
+        "「歡愉」：",
+        "-施放寵物技能時，進入持續30秒的「歡愉」狀態，獲得傷害提升13%。"
+      ],
+      "source": "acc set",
+      "demo": true
+    },
+    {
+      "id": "acc-湮滅崩解-護符",
+      "name": "湮滅崩解 護符",
+      "set": "湮滅崩解",
+      "slot": "護符",
+      "stats": {
+        "elementalPower": 25.0,
+        "strPercent": 0.13,
+        "intPercent": 0.13,
+        "resonance": 0.08
+      },
+      "statLines": [
+        "全屬性強化 +25.0",
+        "力量 +13.0%",
+        "智力 +13.0%",
+        "共鳴期間傷害 +8.0%"
+      ],
+      "effects": [
+        "「無情緒」：",
+        "-施放技能時獲得1層「無情緒」效果，獲得對頭目傷害1.5%，效果持續12秒，最多疊加10層。"
+      ],
+      "source": "acc set",
+      "demo": true
+    },
+    {
+      "id": "acc-湮滅崩解-套裝效果",
+      "name": "湮滅崩解 套裝效果",
+      "set": "湮滅崩解",
+      "slot": "飾品套裝",
+      "stats": {
+        "damageBoost": 0.07,
+        "skillDamage": 0.08,
+        "normalAttackDamage": 0.08
+      },
+      "statLines": [
+        "傷害提升 +7.0%",
+        "技能傷害 +8.0%",
+        "普攻傷害 +8.0%"
+      ],
+      "effects": [
+        "全職業「等級1至70主動技能」等級+1",
+        "「複合情緒」：",
+        "-觸發「湮滅崩解」套裝內任意效果時，皆有50%的機率觸發套裝內除「恐懼」「憤怒」以外的其他效果，且套裝內的效果額外提高80%。"
+      ],
+      "source": "acc set",
+      "demo": true
+    },
+    {
+      "id": "acc-餘燼離魄-項鍊",
+      "name": "餘燼離魄 項鍊",
+      "set": "餘燼離魄",
+      "slot": "項鍊",
+      "stats": {
+        "elementalPower": 22.0,
+        "normalAttackDamage": 0.12,
+        "skillDamage": 0.12
+      },
+      "statLines": [
+        "全屬性強化 +22.0",
+        "普攻傷害 +12.0%",
+        "技能傷害 +12.0%"
+      ],
+      "effects": [
+        "-可攜帶銘刻等級上限+2，每級額外的銘刻等級會使裝備評分+70",
+        "「席卷」：",
+        "-該件裝備銘刻等級達到9時，獲得傷害提升10%。"
+      ],
+      "source": "acc set",
+      "demo": true
+    },
+    {
+      "id": "acc-餘燼離魄-腕帶",
+      "name": "餘燼離魄 腕帶",
+      "set": "餘燼離魄",
+      "slot": "腕帶",
+      "stats": {
+        "critRate": 0.07,
+        "critRateMagic": 0.07,
+        "bossDamage": 0.1,
+        "statusDamage": 0.06
+      },
+      "statLines": [
+        "物理暴擊率 +7.0%",
+        "魔法暴擊率 +7.0%",
+        "對頭目傷害 +10.0%",
+        "剋制異常敵人 +6.0%"
+      ],
+      "effects": [
+        "-可攜帶銘刻等級上限+2，每級額外的銘刻等級會使裝備評分+70",
+        "「貫穿」：",
+        "-該件裝備銘刻等級達到9時，獲得暴擊傷害18%。"
+      ],
+      "source": "acc set",
+      "demo": true
+    },
+    {
+      "id": "acc-餘燼離魄-戒指",
+      "name": "餘燼離魄 戒指",
+      "set": "餘燼離魄",
+      "slot": "戒指",
+      "stats": {
+        "damageBoost": 0.1,
+        "critDamage": 0.18,
+        "penetration": 0.06,
+        "penetrationMagic": 0.06
+      },
+      "statLines": [
+        "傷害提升 +10.0%",
+        "暴擊傷害 +18.0%",
+        "物理穿透 +6.0%",
+        "魔法穿透 +6.0%"
+      ],
+      "effects": [
+        "-可攜帶銘刻等級上限+2，每級額外的銘刻等級會使裝備評分+70",
+        "「撕裂」：",
+        "-該件裝備銘刻等級達到9時，獲得全屬性強化25。"
+      ],
+      "source": "acc set",
+      "demo": true
+    },
+    {
+      "id": "acc-餘燼離魄-印章",
+      "name": "餘燼離魄 印章",
+      "set": "餘燼離魄",
+      "slot": "印章",
+      "stats": {
+        "elementalPower": 22.0,
+        "statusDamage": 0.08,
+        "attackPercent": 0.08,
+        "attackPercentMagic": 0.08,
+        "cooldownSpeed": 40.0
+      },
+      "statLines": [
+        "全屬性強化 +22.0",
+        "剋制異常敵人 +8.0%",
+        "物理攻擊力 +8.0%",
+        "魔法攻擊力 +8.0%",
+        "冷卻速度 +40.0"
+      ],
+      "effects": [
+        "-可攜帶銘刻等級上限+2，每級額外的銘刻等級會使裝備評分+70",
+        "「橫亙」：",
+        "-該件裝備銘刻等級達到9時，獲得剋制異常敵人8%。"
+      ],
+      "source": "acc set",
+      "demo": true
+    },
+    {
+      "id": "acc-餘燼離魄-護符",
+      "name": "餘燼離魄 護符",
+      "set": "餘燼離魄",
+      "slot": "護符",
+      "stats": {
+        "elementalPower": 20.0,
+        "strPercent": 0.12,
+        "intPercent": 0.12,
+        "resonance": 0.1,
+        "cooldownSpeed": 40.0
+      },
+      "statLines": [
+        "全屬性強化 +20.0",
+        "力量 +12.0%",
+        "智力 +12.0%",
+        "共鳴期間傷害 +10.0%",
+        "冷卻速度 +40.0"
+      ],
+      "effects": [
+        "-可攜帶銘刻等級上限+2，每級額外的銘刻等級會使裝備評分+70",
+        "「戰栗」：",
+        "-該件裝備銘刻等級達到9時，獲得普攻和技能傷害9%。"
+      ],
+      "source": "acc set",
+      "demo": true
+    },
+    {
+      "id": "acc-餘燼離魄-套裝效果",
+      "name": "餘燼離魄 套裝效果",
+      "set": "餘燼離魄",
+      "slot": "飾品套裝",
+      "stats": {
+        "damageBoost": 0.09,
+        "skillDamage": 0.1,
+        "normalAttackDamage": 0.1
+      },
+      "statLines": [
+        "傷害提升 +9.0%",
+        "技能傷害 +10.0%",
+        "普攻傷害 +10.0%"
+      ],
+      "effects": [
+        "「四象明鑑」：",
+        "-飾品部位銘刻總等級達到Lv.40時，獲得27點全屬性強化。",
+        "-飾品部位銘刻總等級達到Lv.43時，獲得對頭目傷害8%。",
+        "-飾品部位銘刻總等級達到Lv.45時，獲得全屬性傷害10%。"
+      ],
+      "source": "acc set",
+      "demo": true
+    },
+    {
+      "id": "acc-獄主兩極-項鍊",
+      "name": "獄主兩極 項鍊",
+      "set": "獄主兩極",
+      "slot": "項鍊",
+      "stats": {
+        "elementalPower": 22.0,
+        "normalAttackDamage": 0.13,
+        "skillDamage": 0.13,
+        "attackPercent": 0.08,
+        "attackPercentMagic": 0.08
+      },
+      "statLines": [
+        "全屬性強化 +22.0",
+        "普攻傷害 +13.0%",
+        "技能傷害 +13.0%",
+        "物理攻擊力 +8.0%",
+        "魔法攻擊力 +8.0%"
+      ],
+      "effects": [
+        "「調勻」：",
+        "-對敵人造成傷害時，能觸發「平衡思域」。",
+        "-若處於「平衡思域」，自身額外獲得剋制異常敵人12%。"
+      ],
+      "source": "acc set",
+      "demo": true
+    },
+    {
+      "id": "acc-獄主兩極-腕帶",
+      "name": "獄主兩極 腕帶",
+      "set": "獄主兩極",
+      "slot": "腕帶",
+      "stats": {
+        "elementalPower": 22.0,
+        "critRate": 0.06,
+        "critRateMagic": 0.06,
+        "critDamage": 0.18
+      },
+      "statLines": [
+        "全屬性強化 +22.0",
+        "物理暴擊率 +6.0%",
+        "魔法暴擊率 +6.0%",
+        "暴擊傷害 +18.0%"
+      ],
+      "effects": [
+        "「萃取」：",
+        "-對敵人造成傷害時，能觸發「平衡思域」。",
+        "-若處於「平衡思域」，自身額外獲得普攻和技能傷害13%。"
+      ],
+      "source": "acc set",
+      "demo": true
+    },
+    {
+      "id": "acc-獄主兩極-戒指",
+      "name": "獄主兩極 戒指",
+      "set": "獄主兩極",
+      "slot": "戒指",
+      "stats": {
+        "elementalPower": 22.0,
+        "damageBoost": 0.1,
+        "attackPercent": 0.08,
+        "attackPercentMagic": 0.08
+      },
+      "statLines": [
+        "全屬性強化 +22.0",
+        "傷害提升 +10.0%",
+        "物理攻擊力 +8.0%",
+        "魔法攻擊力 +8.0%"
+      ],
+      "effects": [
+        "「重創」：",
+        "-對敵人造成傷害時，能觸發「平衡思域」。",
+        "-若處於「平衡思域」，自身額外獲得對頭目傷害10%。"
+      ],
+      "source": "acc set",
+      "demo": true
+    },
+    {
+      "id": "acc-獄主兩極-印章",
+      "name": "獄主兩極 印章",
+      "set": "獄主兩極",
+      "slot": "印章",
+      "stats": {
+        "statusDamage": 0.1,
+        "bossDamage": 0.11,
+        "strPercent": 0.09,
+        "intPercent": 0.09,
+        "cooldownSpeed": 30.0
+      },
+      "statLines": [
+        "剋制異常敵人 +10.0%",
+        "對頭目傷害 +11.0%",
+        "力量 +9.0%",
+        "智力 +9.0%",
+        "冷卻速度 +30.0"
+      ],
+      "effects": [
+        "「拂煦」：",
+        "-對敵人造成傷害時，能觸發「平衡思域」。",
+        "-處於「平衡思域」還會每秒恢復1.2%最大生命值，同時增加50點攻擊速度，50點冷卻速度和10%移動速度，自身可得到兩倍此效果。"
+      ],
+      "source": "acc set",
+      "demo": true
+    },
+    {
+      "id": "acc-獄主兩極-護符",
+      "name": "獄主兩極 護符",
+      "set": "獄主兩極",
+      "slot": "護符",
+      "stats": {
+        "statusDamage": 0.1,
+        "damageBoost": 0.11,
+        "strPercent": 0.09,
+        "intPercent": 0.09,
+        "cooldownSpeed": 30.0
+      },
+      "statLines": [
+        "剋制異常敵人 +10.0%",
+        "傷害提升 +11.0%",
+        "力量 +9.0%",
+        "智力 +9.0%",
+        "冷卻速度 +30.0"
+      ],
+      "effects": [
+        "「壁壘」：",
+        "-自身每500點物理/魔法防禦力轉化為對應8點物理/魔法攻擊力，最高40點。",
+        "-處於「平衡思域」還能再獲得16%物理和魔法防禦力。"
+      ],
+      "source": "acc set",
+      "demo": true
+    },
+    {
+      "id": "acc-獄主兩極-套裝效果",
+      "name": "獄主兩極 套裝效果",
+      "set": "獄主兩極",
+      "slot": "飾品套裝",
+      "stats": {
+        "damageBoost": 0.07,
+        "skillDamage": 0.08,
+        "normalAttackDamage": 0.08
+      },
+      "statLines": [
+        "傷害提升 +7.0%",
+        "技能傷害 +8.0%",
+        "普攻傷害 +8.0%"
+      ],
+      "effects": [
+        "「鑒空衡平」：",
+        "-「平衡思域」中的效果提高30%，「平衡思域」持續時間增加5秒，範圍增加50%，「平衡思域」冷卻時間減少3秒。"
+      ],
+      "source": "acc set",
+      "demo": true
+    },
+    {
+      "id": "gear-王騎-頭-2",
+      "name": "王騎 頭",
+      "set": "王騎",
+      "slot": "頭",
+      "stats": {
+        "attackPercent": 0.05,
+        "elementalPower": 11.0,
+        "damageBoost": 0.05
+      },
+      "statLines": [
+        "攻擊 +5.0%",
+        "屬強 +11",
+        "傷害提升 +5.0%"
+      ],
+      "effects": [],
+      "source": "裝備",
+      "demo": true
+    },
+    {
+      "id": "gear-王騎-褲-3",
+      "name": "王騎 褲",
+      "set": "王騎",
+      "slot": "褲",
+      "stats": {
+        "elementalPower": 11.0,
+        "skillDamage": 0.1
+      },
+      "statLines": [
+        "屬強 +11",
+        "技傷 +10.0%"
+      ],
+      "effects": [],
+      "source": "裝備",
+      "demo": true
+    },
+    {
+      "id": "gear-王騎-鞋-4",
+      "name": "王騎 鞋",
+      "set": "王騎",
+      "slot": "鞋",
+      "stats": {
+        "elementalPower": 5.5,
+        "skillDamage": 0.03,
+        "damageBoost": 0.13
+      },
+      "statLines": [
+        "屬強 +5.5",
+        "技傷 +3.0%",
+        "傷害提升 +13.0%"
+      ],
+      "effects": [],
+      "source": "裝備",
+      "demo": true
+    },
+    {
+      "id": "gear-戰車-身-5",
+      "name": "戰車 身",
+      "set": "戰車",
+      "slot": "身",
+      "stats": {
+        "critRate": 0.08,
+        "critDamage": 0.18
+      },
+      "statLines": [
+        "暴擊 +8.0%",
+        "暴傷 +18.0%"
+      ],
+      "effects": [],
+      "source": "裝備",
+      "demo": true
+    },
+    {
+      "id": "gear-無赦-手-6",
+      "name": "無赦 手",
+      "set": "無赦",
+      "slot": "手",
+      "stats": {
+        "critRate": 0.1,
+        "critDamage": 0.05
+      },
+      "statLines": [
+        "暴擊 +10.0%",
+        "暴傷 +5.0%"
+      ],
+      "effects": [],
+      "source": "裝備",
+      "demo": true
+    },
+    {
+      "id": "gear-魔劍-印章-7",
+      "name": "魔劍 印章",
+      "set": "魔劍",
+      "slot": "印章",
+      "stats": {
+        "attackPercent": 0.07,
+        "skillDamage": 0.05,
+        "penetration": 0.03
+      },
+      "statLines": [
+        "攻擊 +7.0%",
+        "技傷 +5.0%",
+        "穿透 +3.0%"
+      ],
+      "effects": [],
+      "source": "裝備",
+      "demo": true
+    },
+    {
+      "id": "gear-魔劍-護符-8",
+      "name": "魔劍 護符",
+      "set": "魔劍",
+      "slot": "護符",
+      "stats": {},
+      "statLines": [],
+      "effects": [],
+      "source": "裝備",
+      "demo": true
+    },
+    {
+      "id": "gear-魔劍-頸鍊-9",
+      "name": "魔劍 頸鍊",
+      "set": "魔劍",
+      "slot": "頸鍊",
+      "stats": {
+        "critRate": 0.04,
+        "critDamage": 0.08,
+        "skillDamage": 0.04
+      },
+      "statLines": [
+        "暴擊 +4.0%",
+        "暴傷 +8.0%",
+        "技傷 +4.0%"
+      ],
+      "effects": [],
+      "source": "裝備",
+      "demo": true
+    },
+    {
+      "id": "gear-魔劍-腕帶-10",
+      "name": "魔劍 腕帶",
+      "set": "魔劍",
+      "slot": "腕帶",
+      "stats": {
+        "critDamage": 0.14
+      },
+      "statLines": [
+        "暴傷 +14.0%"
+      ],
+      "effects": [],
+      "source": "裝備",
+      "demo": true
+    },
+    {
+      "id": "gear-魔劍-戒指-11",
+      "name": "魔劍 戒指",
+      "set": "魔劍",
+      "slot": "戒指",
+      "stats": {
+        "critRate": 0.08,
+        "critDamage": 0.06,
+        "skillDamage": 0.03
+      },
+      "statLines": [
+        "暴擊 +8.0%",
+        "暴傷 +6.0%",
+        "技傷 +3.0%"
+      ],
+      "effects": [],
+      "source": "裝備",
+      "demo": true
+    },
+    {
+      "id": "gear-王騎-防具套裝-12",
+      "name": "王騎 防具套裝",
+      "set": "王騎",
+      "slot": "防具套裝",
+      "stats": {},
+      "statLines": [],
+      "effects": [],
+      "source": "裝備",
+      "demo": true
+    },
+    {
+      "id": "gear-魔劍-飾品套裝-13",
+      "name": "魔劍 飾品套裝",
+      "set": "魔劍",
+      "slot": "飾品套裝",
+      "stats": {
+        "skillDamage": 0.08
+      },
+      "statLines": [
+        "技傷 +8.0%"
+      ],
+      "effects": [],
+      "source": "裝備",
+      "demo": true
+    },
+    {
+      "id": "gear-魔劍-護符效果-14",
+      "name": "魔劍 護符效果",
+      "set": "魔劍",
+      "slot": "護符效果",
+      "stats": {
+        "intPercent": 0.08
+      },
+      "statLines": [
+        "智力 +8.0%"
+      ],
+      "effects": [],
+      "source": "裝備",
+      "demo": true
+    },
+    {
+      "id": "gear-符文-腕帶-15",
+      "name": "符文 腕帶",
+      "set": "符文",
+      "slot": "腕帶",
+      "stats": {
+        "critRate": 0.06,
+        "bossDamage": 0.04
+      },
+      "statLines": [
+        "暴擊 +6.0%",
+        "對頭目傷害 +4.0%"
+      ],
+      "effects": [],
+      "source": "裝備",
+      "demo": true
+    },
+    {
+      "id": "gear-毒-腕帶-16",
+      "name": "毒 腕帶",
+      "set": "毒",
+      "slot": "腕帶",
+      "stats": {
+        "critRate": 0.07,
+        "bossDamage": 0.06,
+        "statusDamage": 0.08
+      },
+      "statLines": [
+        "暴擊 +7.0%",
+        "對頭目傷害 +6.0%",
+        "異常 +8.0%"
+      ],
+      "effects": [],
+      "source": "裝備",
+      "demo": true
+    },
+    {
+      "id": "gear-餓-腕帶-17",
+      "name": "餓 腕帶",
+      "set": "餓",
+      "slot": "腕帶",
+      "stats": {
+        "critRate": 0.08,
+        "elementalPower": 8.0,
+        "bossDamage": 0.06
+      },
+      "statLines": [
+        "暴擊 +8.0%",
+        "屬強 +8",
+        "對頭目傷害 +6.0%"
+      ],
+      "effects": [],
+      "source": "裝備",
+      "demo": true
+    },
+    {
+      "id": "gear-朽-腕帶-18",
+      "name": "朽 腕帶",
+      "set": "朽",
+      "slot": "腕帶",
+      "stats": {
+        "critRate": 0.07,
+        "elementalPower": 10.0
+      },
+      "statLines": [
+        "暴擊 +7.0%",
+        "屬強 +10"
+      ],
+      "effects": [],
+      "source": "裝備",
+      "demo": true
+    },
+    {
+      "id": "gear-餓-腕帶效果-19",
+      "name": "餓 腕帶效果",
+      "set": "餓",
+      "slot": "腕帶效果",
+      "stats": {
+        "elementalPower": 20.0,
+        "damageBoost": 0.1
+      },
+      "statLines": [
+        "屬強 +20",
+        "傷害提升 +10.0%"
+      ],
+      "effects": [],
+      "source": "裝備",
+      "demo": true
+    },
+    {
+      "id": "gear-符文-頸鍊-20",
+      "name": "符文 頸鍊",
+      "set": "符文",
+      "slot": "頸鍊",
+      "stats": {
+        "elementalPower": 13.0,
+        "skillDamage": 0.06
+      },
+      "statLines": [
+        "屬強 +13",
+        "技傷 +6.0%"
+      ],
+      "effects": [],
+      "source": "裝備",
+      "demo": true
+    },
+    {
+      "id": "gear-毒-頸鍊-21",
+      "name": "毒 頸鍊",
+      "set": "毒",
+      "slot": "頸鍊",
+      "stats": {
+        "elementalPower": 15.0,
+        "skillDamage": 0.08
+      },
+      "statLines": [
+        "屬強 +15",
+        "技傷 +8.0%"
+      ],
+      "effects": [],
+      "source": "裝備",
+      "demo": true
+    },
+    {
+      "id": "gear-餓-頸鍊-22",
+      "name": "餓 頸鍊",
+      "set": "餓",
+      "slot": "頸鍊",
+      "stats": {
+        "elementalPower": 15.0,
+        "skillDamage": 0.08
+      },
+      "statLines": [
+        "屬強 +15",
+        "技傷 +8.0%"
+      ],
+      "effects": [],
+      "source": "裝備",
+      "demo": true
+    },
+    {
+      "id": "gear-朽-頸鍊-23",
+      "name": "朽 頸鍊",
+      "set": "朽",
+      "slot": "頸鍊",
+      "stats": {
+        "elementalPower": 20.0,
+        "skillDamage": 0.07
+      },
+      "statLines": [
+        "屬強 +20",
+        "技傷 +7.0%"
+      ],
+      "effects": [],
+      "source": "裝備",
+      "demo": true
+    },
+    {
+      "id": "gear-符文-戒指-24",
+      "name": "符文 戒指",
+      "set": "符文",
+      "slot": "戒指",
+      "stats": {
+        "critDamage": 0.08,
+        "damageBoost": 0.06,
+        "penetration": 0.05
+      },
+      "statLines": [
+        "暴傷 +8.0%",
+        "傷害提升 +6.0%",
+        "穿透 +5.0%"
+      ],
+      "effects": [],
+      "source": "裝備",
+      "demo": true
+    },
+    {
+      "id": "gear-毒-戒指-25",
+      "name": "毒 戒指",
+      "set": "毒",
+      "slot": "戒指",
+      "stats": {
+        "critDamage": 0.1,
+        "damageBoost": 0.08,
+        "penetration": 0.08
+      },
+      "statLines": [
+        "暴傷 +10.0%",
+        "傷害提升 +8.0%",
+        "穿透 +8.0%"
+      ],
+      "effects": [],
+      "source": "裝備",
+      "demo": true
+    },
+    {
+      "id": "gear-餓-戒指-26",
+      "name": "餓 戒指",
+      "set": "餓",
+      "slot": "戒指",
+      "stats": {
+        "critDamage": 0.1,
+        "damageBoost": 0.09,
+        "penetration": 0.07
+      },
+      "statLines": [
+        "暴傷 +10.0%",
+        "傷害提升 +9.0%",
+        "穿透 +7.0%"
+      ],
+      "effects": [],
+      "source": "裝備",
+      "demo": true
+    },
+    {
+      "id": "gear-朽-戒指-27",
+      "name": "朽 戒指",
+      "set": "朽",
+      "slot": "戒指",
+      "stats": {
+        "critDamage": 0.12,
+        "damageBoost": 0.08,
+        "penetration": 0.07
+      },
+      "statLines": [
+        "暴傷 +12.0%",
+        "傷害提升 +8.0%",
+        "穿透 +7.0%"
+      ],
+      "effects": [],
+      "source": "裝備",
+      "demo": true
+    },
+    {
+      "id": "gear-毒-戒指效果-28",
+      "name": "毒 戒指效果",
+      "set": "毒",
+      "slot": "戒指效果",
+      "stats": {
+        "critRate": 0.05,
+        "critDamage": 0.1,
+        "damageBoost": 0.08
+      },
+      "statLines": [
+        "暴擊 +5.0%",
+        "暴傷 +10.0%",
+        "傷害提升 +8.0%"
+      ],
+      "effects": [],
+      "source": "裝備",
+      "demo": true
+    },
+    {
+      "id": "gear-戰狂-印章-29",
+      "name": "戰狂 印章",
+      "set": "戰狂",
+      "slot": "印章",
+      "stats": {
+        "elementalPower": 18.0,
+        "skillDamage": 0.04,
+        "statusDamage": 0.03,
+        "cooldownSpeed": 50.0
+      },
+      "statLines": [
+        "屬強 +18",
+        "技傷 +4.0%",
+        "異常 +3.0%",
+        "CD +50"
+      ],
+      "effects": [],
+      "source": "裝備",
+      "demo": true
+    },
+    {
+      "id": "gear-戰狂-護符-30",
+      "name": "戰狂 護符",
+      "set": "戰狂",
+      "slot": "護符",
+      "stats": {
+        "intPercent": 0.11,
+        "elementalPower": 14.0,
+        "statusDamage": 0.02,
+        "attackSpeed": 35.0
+      },
+      "statLines": [
+        "智力 +11.0%",
+        "屬強 +14",
+        "異常 +2.0%",
+        "攻速 +35"
+      ],
+      "effects": [],
+      "source": "裝備",
+      "demo": true
+    },
+    {
+      "id": "gear-天啟-印章-31",
+      "name": "天啟 印章",
+      "set": "天啟",
+      "slot": "印章",
+      "stats": {
+        "elementalPower": 20.0,
+        "skillDamage": 0.04,
+        "bossDamage": 0.04,
+        "cooldownSpeed": 35.0
+      },
+      "statLines": [
+        "屬強 +20",
+        "技傷 +4.0%",
+        "對頭目傷害 +4.0%",
+        "CD +35"
+      ],
+      "effects": [],
+      "source": "裝備",
+      "demo": true
+    },
+    {
+      "id": "gear-天啟-護符-32",
+      "name": "天啟 護符",
+      "set": "天啟",
+      "slot": "護符",
+      "stats": {
+        "intPercent": 0.13,
+        "elementalPower": 18.0,
+        "bossDamage": 0.02,
+        "attackSpeed": 35.0
+      },
+      "statLines": [
+        "智力 +13.0%",
+        "屬強 +18",
+        "對頭目傷害 +2.0%",
+        "攻速 +35"
+      ],
+      "effects": [],
+      "source": "裝備",
+      "demo": true
+    },
+    {
+      "id": "gear-宿命-印章-33",
+      "name": "宿命 印章",
+      "set": "宿命",
+      "slot": "印章",
+      "stats": {
+        "elementalPower": 20.0,
+        "skillDamage": 0.05,
+        "resonance": 0.08
+      },
+      "statLines": [
+        "屬強 +20",
+        "技傷 +5.0%",
+        "共嗚傷害 +8.0%"
+      ],
+      "effects": [],
+      "source": "裝備",
+      "demo": true
+    },
+    {
+      "id": "gear-宿命-護符-34",
+      "name": "宿命 護符",
+      "set": "宿命",
+      "slot": "護符",
+      "stats": {
+        "elementalPower": 15.0,
+        "skillDamage": 0.04,
+        "resonance": 0.05
+      },
+      "statLines": [
+        "屬強 +15",
+        "技傷 +4.0%",
+        "共嗚傷害 +5.0%"
+      ],
+      "effects": [],
+      "source": "裝備",
+      "demo": true
+    },
+    {
+      "id": "gear-宿命-印章效果-35",
+      "name": "宿命 印章效果",
+      "set": "宿命",
+      "slot": "印章效果",
+      "stats": {
+        "skillDamage": 0.06
+      },
+      "statLines": [
+        "技傷 +6.0%"
+      ],
+      "effects": [],
+      "source": "裝備",
+      "demo": true
+    },
+    {
+      "id": "gear-戰狂-護符效果-36",
+      "name": "戰狂 護符效果",
+      "set": "戰狂",
+      "slot": "護符效果",
+      "stats": {
+        "elementalPower": 10.0
+      },
+      "statLines": [
+        "屬強 +10"
+      ],
+      "effects": [],
+      "source": "裝備",
+      "demo": true
+    },
+    {
+      "id": "gear-宿命-護符效果-37",
+      "name": "宿命 護符效果",
+      "set": "宿命",
+      "slot": "護符效果",
+      "stats": {
+        "elementalPower": 12.0,
+        "damageBoost": 0.04
+      },
+      "statLines": [
+        "屬強 +12",
+        "傷害提升 +4.0%"
+      ],
+      "effects": [],
+      "source": "裝備",
+      "demo": true
+    },
+    {
+      "id": "gear-屬性-武器-38",
+      "name": "屬性 武器",
+      "set": "屬性",
+      "slot": "武器",
+      "stats": {
+        "attackPercent": 0.03,
+        "critRate": 0.06,
+        "elementalPower": 44.0
+      },
+      "statLines": [
+        "攻擊 +3.0%",
+        "暴擊 +6.0%",
+        "屬強 +44"
+      ],
+      "effects": [],
+      "source": "裝備",
+      "demo": true
+    },
+    {
+      "id": "gear-爆擊-武器-39",
+      "name": "爆擊 武器",
+      "set": "爆擊",
+      "slot": "武器",
+      "stats": {
+        "attackPercent": 0.03,
+        "critRate": 0.1,
+        "critDamage": 0.25,
+        "attackSpeed": 40.0
+      },
+      "statLines": [
+        "攻擊 +3.0%",
+        "暴擊 +10.0%",
+        "暴傷 +25.0%",
+        "攻速 +40"
+      ],
+      "effects": [],
+      "source": "裝備",
+      "demo": true
+    },
+    {
+      "id": "gear-無赦-鞋-40",
+      "name": "無赦 鞋",
+      "set": "無赦",
+      "slot": "鞋",
+      "stats": {
+        "penetration": 0.12
+      },
+      "statLines": [
+        "穿透 +12.0%"
+      ],
+      "effects": [],
+      "source": "裝備",
+      "demo": true
+    },
+    {
+      "id": "gear-戰車-褲-41",
+      "name": "戰車 褲",
+      "set": "戰車",
+      "slot": "褲",
+      "stats": {
+        "critRate": 0.08,
+        "penetration": 0.1
+      },
+      "statLines": [
+        "暴擊 +8.0%",
+        "穿透 +10.0%"
+      ],
+      "effects": [],
+      "source": "裝備",
+      "demo": true
+    },
+    {
+      "id": "gear-無赦-套裝效果-42",
+      "name": "無赦 套裝效果",
+      "set": "無赦",
+      "slot": "套裝效果",
+      "stats": {
+        "penetration": 0.1
+      },
+      "statLines": [
+        "穿透 +10.0%"
+      ],
+      "effects": [],
+      "source": "裝備",
+      "demo": true
+    }
+  ],
+  "items": [
+    {
+      "id": "item-inscription-all",
+      "name": "銘刻 全屬性傷害",
+      "kind": "item",
+      "stats": {
+        "allElementDamage": 0.17
+      },
+      "statLines": [
+        "全屬性傷害 +17%"
+      ],
+      "demo": true
+    },
+    {
+      "id": "item-heater-all",
+      "name": "熱水器 全屬性傷害",
+      "kind": "item",
+      "stats": {
+        "allElementDamage": 0.066
+      },
+      "statLines": [
+        "全屬性傷害 +6.6%"
+      ],
+      "demo": true
+    },
+    {
+      "id": "item-dragon-all",
+      "name": "龍 全屬性傷害",
+      "kind": "item",
+      "stats": {
+        "allElementDamage": 0.08
+      },
+      "statLines": [
+        "全屬性傷害 +8%"
+      ],
+      "demo": true
+    },
+    {
+      "id": "item-circuit-all",
+      "name": "迴路 全屬性傷害",
+      "kind": "item",
+      "stats": {
+        "allElementDamage": 0.038
+      },
+      "statLines": [
+        "全屬性傷害 +3.8%"
+      ],
+      "demo": true
+    },
+    {
+      "id": "item-weapon-add",
+      "name": "武器 附加傷害",
+      "kind": "item",
+      "stats": {
+        "additionalDamage": 0.15
+      },
+      "statLines": [
+        "附加傷害 +15%"
+      ],
+      "demo": true
+    },
+    {
+      "id": "item-heater-add",
+      "name": "熱水器 附加傷害",
+      "kind": "item",
+      "stats": {
+        "additionalDamage": 0.088
+      },
+      "statLines": [
+        "附加傷害 +8.8%"
+      ],
+      "demo": true
+    },
+    {
+      "id": "item-dragon-add",
+      "name": "龍 附加傷害",
+      "kind": "item",
+      "stats": {
+        "additionalDamage": 0.162
+      },
+      "statLines": [
+        "附加傷害 +16.2%"
+      ],
+      "demo": true
+    },
+    {
+      "id": "item-food-elem",
+      "name": "食物 屬性",
+      "kind": "item",
+      "stats": {
+        "elementalPower": 20
+      },
+      "statLines": [
+        "屬強 +20 (示例)"
+      ],
+      "demo": true
+    },
+    {
+      "id": "item-food-status",
+      "name": "食物 異常",
+      "kind": "item",
+      "stats": {
+        "statusDamage": 0.05
+      },
+      "statLines": [
+        "異常 +5% (示例)"
+      ],
+      "demo": true
+    },
+    {
+      "id": "item-2nd-awaken",
+      "name": "二覺效果",
+      "kind": "item",
+      "stats": {
+        "damageBoost": 0.1,
+        "resonance": 0.1
+      },
+      "statLines": [
+        "提傷 +10%、共鳴 +10% (示例)"
+      ],
+      "demo": true
+    }
+  ],
+  "baseline": {
+    "name": "siumai 進戰 (Excel)",
+    "note": "From siumai 傷害 sheet row no 米加",
+    "attack": 24717,
+    "defenseBreak": 10411,
+    "critRate": 1.0,
+    "critDamage": 2.89,
+    "elementalPower": 411.6,
+    "skillDamage": 1.011,
+    "resonance": 0.225,
+    "damageBoost": 1.672,
+    "circuitBoost": 0,
+    "allElementDamage": 0.354,
+    "additionalDamage": 0.15,
+    "statusDamage": 0.32,
+    "bossDamage": 0.9,
+    "penetration": 0.38,
+    "trainingCorrection": 0.08,
+    "skillMultiplier": 1.0
+  },
+  "bareBase": {
+    "name": "空白基底",
+    "attack": 20000,
+    "defenseBreak": 8000,
+    "critRate": 0.5,
+    "critDamage": 1.5,
+    "elementalPower": 200,
+    "skillDamage": 0.4,
+    "resonance": 0.1,
+    "damageBoost": 0.5,
+    "circuitBoost": 0,
+    "allElementDamage": 0,
+    "additionalDamage": 0,
+    "statusDamage": 0.1,
+    "bossDamage": 0.3,
+    "penetration": 0.1,
+    "trainingCorrection": 0.08,
+    "skillMultiplier": 1.0
+  },
+  "slots": [
+    "印章",
+    "印章效果",
+    "套裝效果",
+    "戒指",
+    "戒指效果",
+    "手",
+    "武器",
+    "腕帶",
+    "腕帶效果",
+    "褲",
+    "護符",
+    "護符效果",
+    "身",
+    "防具套裝",
+    "鞋",
+    "項鍊",
+    "頭",
+    "頸鍊",
+    "飾品套裝"
+  ]
+}

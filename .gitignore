@@ -1,0 +1,13 @@
+# Local data / spreadsheets
+燒賣 裝備.xlsx
+*.xlsx
+
+# OS junk
+~$*
+.DS_Store
+
+# deps / build
+node_modules/
+dist/
+
+tsconfig.tsbuildinfo
