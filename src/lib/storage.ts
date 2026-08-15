@@ -1,6 +1,13 @@
-import type { CatalogItem, Equipment, Profile } from "./types";
+import type {
+  CatalogItem,
+  CircuitPiece,
+  CircuitScheme,
+  Equipment,
+  Profile,
+} from "./types";
 import demoData from "../data/demoData.json";
 import { emptyStats, makeId } from "./damage";
+import { normalizeCircuitPiece, normalizeCircuitScheme } from "./circuit";
 
 const STORAGE_KEY = "coa-dmg-calc:v1";
 
@@ -8,6 +15,12 @@ export type PersistedState = {
   profiles: Profile[];
   customEquipment: Equipment[];
   customItems: CatalogItem[];
+  circuits: CircuitPiece[];
+  circuitSchemes: CircuitScheme[];
+  /** Demo equipment ids the user deleted (hidden from catalog). */
+  hiddenEquipmentIds: string[];
+  /** Demo item ids the user deleted. */
+  hiddenItemIds: string[];
   compareIds: string[];
   activeProfileId: string | null;
 };
@@ -20,139 +33,60 @@ export function getDemoItems(): CatalogItem[] {
   return demoData.items as CatalogItem[];
 }
 
-function statsFrom(raw: {
-  attack: number;
-  defenseBreak: number;
-  critRate: number;
-  critDamage: number;
-  elementalPower: number;
-  skillDamage: number;
-  resonance: number;
-  damageBoost: number;
-  circuitBoost: number;
-  allElementDamage: number;
-  additionalDamage: number;
-  statusDamage: number;
-  bossDamage: number;
-  penetration: number;
-  trainingCorrection: number;
-  skillMultiplier: number;
-}): Profile["base"] {
+function emptyPersistedState(): PersistedState {
   return {
-    attack: raw.attack,
-    defenseBreak: raw.defenseBreak,
-    critRate: raw.critRate,
-    critDamage: raw.critDamage,
-    elementalPower: raw.elementalPower,
-    skillDamage: raw.skillDamage,
-    resonance: raw.resonance,
-    damageBoost: raw.damageBoost,
-    circuitBoost: raw.circuitBoost,
-    allElementDamage: raw.allElementDamage,
-    additionalDamage: raw.additionalDamage,
-    statusDamage: raw.statusDamage,
-    bossDamage: raw.bossDamage,
-    penetration: raw.penetration,
-    trainingCorrection: raw.trainingCorrection,
-    skillMultiplier: raw.skillMultiplier,
+    profiles: [],
+    customEquipment: [],
+    customItems: [],
+    circuits: [],
+    circuitSchemes: [],
+    hiddenEquipmentIds: [],
+    hiddenItemIds: [],
+    compareIds: [],
+    activeProfileId: null,
   };
 }
 
-export function createDefaultProfiles(): Profile[] {
-  const now = new Date().toISOString();
-  const base = demoData.baseline;
-  const bare = demoData.bareBase;
-
-  // 嗚、滿效果 row from siumai 傷害 (2026/7/12)
-  const fullBuff = {
-    attack: 30639,
-    defenseBreak: 10411,
-    critRate: 1.0,
-    critDamage: 3.5,
-    elementalPower: 489.0,
-    skillDamage: 1.433,
-    resonance: 0.825,
-    damageBoost: 2.686,
-    circuitBoost: 0,
-    allElementDamage: 0.354,
-    additionalDamage: 0.4,
-    statusDamage: 0.38,
-    bossDamage: 1.203,
-    penetration: 0.38,
-    trainingCorrection: 0.08,
-    skillMultiplier: 1.0,
+function normalizeStoredProfile(raw: Profile): Profile {
+  return {
+    ...raw,
+    element: raw.element ?? "all",
+    circuitSchemeId: raw.circuitSchemeId ?? null,
   };
+}
 
-  const excelProfile: Profile = {
-    id: makeId("profile"),
-    name: "siumai 進戰 (Excel)",
-    note: "從 siumai 傷害 分頁匯入的基準數值（已含當前配裝）",
-    damageType: "magic",
-    base: statsFrom(base),
-    equipped: {},
-    itemIds: [],
-    createdAt: now,
-    updatedAt: now,
-  };
-
-  const buffProfile: Profile = {
-    id: makeId("profile"),
-    name: "siumai 嗚滿 (Excel)",
-    note: "食物 + 二覺等滿效果列，用於示範比較",
-    damageType: "magic",
-    base: statsFrom(fullBuff),
-    equipped: {},
-    itemIds: [],
-    createdAt: now,
-    updatedAt: now,
-  };
-
-  const buildProfile: Profile = {
-    id: makeId("profile"),
-    name: "空白組裝檔",
-    note: "從基底數值開始，自行選擇裝備與道具",
-    damageType: "magic",
-    base: statsFrom(bare),
-    equipped: {},
-    itemIds: [],
-    createdAt: now,
-    updatedAt: now,
-  };
-
-  return [excelProfile, buffProfile, buildProfile];
+/** True when the user already has saved app state in this browser. */
+export function hasStoredState(): boolean {
+  try {
+    return localStorage.getItem(STORAGE_KEY) != null;
+  } catch {
+    return false;
+  }
 }
 
 export function loadState(): PersistedState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      const profiles = createDefaultProfiles();
-      return {
-        profiles,
-        customEquipment: [],
-        customItems: [],
-        compareIds: profiles.map((p) => p.id).slice(0, 2),
-        activeProfileId: profiles[0]?.id ?? null,
-      };
-    }
+    if (!raw) return emptyPersistedState();
     const parsed = JSON.parse(raw) as PersistedState;
     if (!Array.isArray(parsed.profiles)) throw new Error("bad profiles");
     return {
-      profiles: parsed.profiles,
+      profiles: parsed.profiles.map(normalizeStoredProfile),
       customEquipment: parsed.customEquipment ?? [],
       customItems: parsed.customItems ?? [],
+      circuits: (parsed.circuits ?? [])
+        .map(normalizeCircuitPiece)
+        .filter((x): x is CircuitPiece => x !== null),
+      circuitSchemes: (parsed.circuitSchemes ?? [])
+        .map(normalizeCircuitScheme)
+        .filter((x): x is CircuitScheme => x !== null),
+      hiddenEquipmentIds: parsed.hiddenEquipmentIds ?? [],
+      hiddenItemIds: parsed.hiddenItemIds ?? [],
       compareIds: parsed.compareIds ?? [],
       activeProfileId: parsed.activeProfileId ?? parsed.profiles[0]?.id ?? null,
     };
   } catch {
-    const profiles = createDefaultProfiles();
-    return {
-      profiles,
-      customEquipment: [],
-      customItems: [],
-      compareIds: profiles.map((p) => p.id).slice(0, 2),
-      activeProfileId: profiles[0]?.id ?? null,
-    };
+    return emptyPersistedState();
   }
 }
 
@@ -163,6 +97,10 @@ export function saveState(state: PersistedState): void {
       profiles: state.profiles,
       customEquipment: state.customEquipment,
       customItems: state.customItems,
+      circuits: state.circuits,
+      circuitSchemes: state.circuitSchemes,
+      hiddenEquipmentIds: state.hiddenEquipmentIds,
+      hiddenItemIds: state.hiddenItemIds,
       compareIds: state.compareIds,
       activeProfileId: state.activeProfileId,
     }),
@@ -189,8 +127,10 @@ export function blankProfile(name = "新配置"): Profile {
       trainingCorrection: 0.08,
       skillMultiplier: 1,
     },
+    element: "all",
     equipped: {},
     itemIds: [],
+    circuitSchemeId: null,
     createdAt: now,
     updatedAt: now,
   };
