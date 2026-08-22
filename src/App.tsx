@@ -18,12 +18,16 @@ import {
 import {
   PERCENT_STATS,
   STAT_LABELS,
+  bagToStatBonuses,
   calculateDamage,
   formatDamage,
   formatRatio,
+  formatSignedStatValue,
   formatStatValue,
   makeId,
+  mergeStatBags,
   resolveEffectiveStats,
+  TRAINING_DUMMY_DEF,
 } from "./lib/damage";
 import type {
   CatalogItem,
@@ -32,9 +36,28 @@ import type {
   CircuitScheme,
   CombatStats,
   Equipment,
+  InsigniaPiece,
+  InsigniaScheme,
+  ProfessionDef,
+  ProfessionOverride,
   Profile,
   StatBag,
 } from "./lib/types";
+import {
+  configCompareDamage,
+  parseObservedDamage,
+  rankConfigDamage,
+} from "./lib/compare";
+import {
+  applyProfessionCycle,
+  findProfession,
+  listProfessions,
+  normalizeCustomProfession,
+  normalizeProfessionOverride,
+  resolveProfession,
+  resolvedCycleMultiplier,
+  upsertProfessionOverride,
+} from "./lib/profession";
 import {
   EQUIPMENT_SLOTS,
   blankProfile,
@@ -45,12 +68,21 @@ import {
   saveState,
 } from "./lib/storage";
 import { CircuitTab } from "./components/CircuitTab";
+import { InsigniaTab } from "./components/InsigniaTab";
+import { ProfessionTab } from "./components/ProfessionTab";
+import { ProfileSchemeShareBox } from "./components/SchemeShareBox";
 import {
-  CIRCUIT_ELEMENT_LABEL,
   contributionLines,
   equippedCount,
   schemeContribution,
 } from "./lib/circuit";
+import {
+  compareSchemeInsignias,
+  contributionLines as insigniaContributionLines,
+  defaultInsigniaName,
+  equippedCount as insigniaEquippedCount,
+  schemeContribution as insigniaSchemeContribution,
+} from "./lib/insignia";
 import {
   SHARE_URL_WARN_LENGTH,
   buildNumericSharePayload,
@@ -61,6 +93,34 @@ import {
   encodeShareFragment,
   prepareShareImport,
 } from "./lib/share";
+import {
+  decodeCircuitSchemeCode,
+  decodeInsigniaSchemeCode,
+  encodeCircuitSchemeCode,
+  encodeInsigniaSchemeCode,
+  finalizeCircuitSchemeImport,
+  finalizeInsigniaSchemeImport,
+  peekSchemeShareKind,
+  type CircuitSchemeBundle,
+  type InsigniaSchemeBundle,
+} from "./lib/schemeShare";
+import {
+  circuitElementLabel,
+  insigniaRarityLabel,
+  m as i18nMsg,
+  professionNameLabel,
+  slotLabel,
+  statLabel,
+} from "./lib/i18n";
+import { useI18n } from "./lib/I18nProvider";
+
+/** Stats that schemes can add but are not in the editable base form. */
+const SCHEME_EXTRA_FIELDS: Array<keyof CombatStats> = [
+  "physicalAttack",
+  "magicAttack",
+  "attackPercent",
+  "normalAttackDamage",
+];
 
 const BASE_FIELDS: Array<{ key: keyof CombatStats; step?: string }> = [
   { key: "attack" },
@@ -92,16 +152,27 @@ function baseStatInputValue(key: keyof CombatStats, stored: number): number {
   return stored;
 }
 
-const MONSTER_DEFS = [
-  { label: "訓練場 / 預設王 (14000)", value: 14000 },
-  { label: "低防 (5000)", value: 5000 },
-  { label: "中防 (20000)", value: 20000 },
-  { label: "高防 (60000)", value: 60000 },
-];
+function monsterDefs() {
+  const msg = i18nMsg();
+  return [
+    { label: msg.monsterTraining(TRAINING_DUMMY_DEF), value: TRAINING_DUMMY_DEF },
+    { label: msg.monsterLow, value: 5000 },
+    { label: msg.monsterMid, value: 20000 },
+    { label: msg.monsterHigh, value: 60000 },
+  ];
+}
 
-type Tab = "profiles" | "gear" | "items" | "circuits" | "compare";
+type Tab =
+  | "profiles"
+  | "gear"
+  | "items"
+  | "circuits"
+  | "insignias"
+  | "professions"
+  | "compare";
 
 function App() {
+  const { locale, setLocale, m } = useI18n();
   const [ready, setReady] = useState(false);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [customEquipment, setCustomEquipment] = useState<Equipment[]>([]);
@@ -118,6 +189,14 @@ function App() {
   const [hiddenItemIds, setHiddenItemIds] = useState<string[]>([]);
   const [circuits, setCircuits] = useState<CircuitPiece[]>([]);
   const [circuitSchemes, setCircuitSchemes] = useState<CircuitScheme[]>([]);
+  const [insignias, setInsignias] = useState<InsigniaPiece[]>([]);
+  const [insigniaSchemes, setInsigniaSchemes] = useState<InsigniaScheme[]>([]);
+  const [professionOverrides, setProfessionOverrides] = useState<
+    ProfessionOverride[]
+  >([]);
+  const [customProfessions, setCustomProfessions] = useState<ProfessionDef[]>(
+    [],
+  );
   const [selectedGearIds, setSelectedGearIds] = useState<string[]>([]);
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
 
@@ -125,7 +204,7 @@ function App() {
   const [editingGearId, setEditingGearId] = useState<string | null>(null);
   const [gearName, setGearName] = useState("");
   const [gearSlot, setGearSlot] = useState("項鍊");
-  const [gearSet, setGearSet] = useState("自訂");
+  const [gearSet, setGearSet] = useState(() => i18nMsg().customDefault);
   const [gearStats, setGearStats] = useState("");
   const [gearEffects, setGearEffects] = useState("");
 
@@ -174,6 +253,18 @@ function App() {
     return map;
   }, [circuitSchemes]);
 
+  const insigniasById = useMemo(() => {
+    const map = new Map<string, InsigniaPiece>();
+    for (const p of insignias) map.set(p.id, p);
+    return map;
+  }, [insignias]);
+
+  const insigniaSchemesById = useMemo(() => {
+    const map = new Map<string, InsigniaScheme>();
+    for (const s of insigniaSchemes) map.set(s.id, s);
+    return map;
+  }, [insigniaSchemes]);
+
   useEffect(() => {
     if (!ready) return;
     const valid = new Set(circuitSchemes.map((s) => s.id));
@@ -191,6 +282,22 @@ function App() {
   }, [ready, circuitSchemes]);
 
   useEffect(() => {
+    if (!ready) return;
+    const valid = new Set(insigniaSchemes.map((s) => s.id));
+    setProfiles((list) => {
+      let changed = false;
+      const next = list.map((p) => {
+        if (p.insigniaSchemeId && !valid.has(p.insigniaSchemeId)) {
+          changed = true;
+          return { ...p, insigniaSchemeId: null };
+        }
+        return p;
+      });
+      return changed ? next : list;
+    });
+  }, [ready, insigniaSchemes]);
+
+  useEffect(() => {
     let cancelled = false;
 
     async function boot(): Promise<void> {
@@ -203,6 +310,10 @@ function App() {
       let nextHiddenItemIds = state.hiddenItemIds;
       let nextCircuits = state.circuits;
       let nextCircuitSchemes = state.circuitSchemes;
+      let nextInsignias = state.insignias;
+      let nextInsigniaSchemes = state.insigniaSchemes;
+      let nextProfessionOverrides = state.professionOverrides;
+      let nextCustomProfessions = state.customProfessions;
       let nextCompareIds = state.compareIds;
       let nextActiveProfileId = state.activeProfileId;
       let bootStatus = "";
@@ -221,6 +332,10 @@ function App() {
             nextHiddenItemIds = [];
             nextCircuits = [];
             nextCircuitSchemes = [];
+            nextInsignias = [];
+            nextInsigniaSchemes = [];
+            nextProfessionOverrides = [];
+            nextCustomProfessions = [];
             nextCompareIds = [];
             nextActiveProfileId = null;
           }
@@ -244,6 +359,8 @@ function App() {
             nextProfiles,
             new Set(nextCircuits.map((c) => c.id)),
             new Set(nextCircuitSchemes.map((s) => s.id)),
+            new Set(nextInsignias.map((p) => p.id)),
+            new Set(nextInsigniaSchemes.map((s) => s.id)),
           );
 
           if (imported.equipmentToAdd.length) {
@@ -271,6 +388,15 @@ function App() {
           if (imported.schemesToAdd.length) {
             nextCircuitSchemes = [...imported.schemesToAdd, ...nextCircuitSchemes];
           }
+          if (imported.insigniasToAdd.length) {
+            nextInsignias = [...imported.insigniasToAdd, ...nextInsignias];
+          }
+          if (imported.insigniaSchemesToAdd.length) {
+            nextInsigniaSchemes = [
+              ...imported.insigniaSchemesToAdd,
+              ...nextInsigniaSchemes,
+            ];
+          }
 
           const newProfiles = imported.profiles;
           const resolved = imported.resolvedProfiles;
@@ -293,15 +419,15 @@ function App() {
             if (newProfiles.length === 0) {
               bootStatus =
                 resolved.length === 1
-                  ? `分享配置已存在，已開啟：${resolved[0]!.name}`
-                  : `分享的 ${resolved.length} 組配置均已存在，已開啟現有配置`;
+                  ? i18nMsg().shareExistsOne(resolved[0]!.name)
+                  : i18nMsg().shareExistsMany(resolved.length);
             } else if (skipped === 0) {
               bootStatus =
                 newProfiles.length === 1
-                  ? `已從分享連結匯入配置：${newProfiles[0]!.name}`
-                  : `已從分享連結匯入 ${newProfiles.length} 組配置`;
+                  ? i18nMsg().shareImportedOne(newProfiles[0]!.name)
+                  : i18nMsg().shareImportedMany(newProfiles.length);
             } else {
-              bootStatus = `已匯入 ${newProfiles.length} 組新配置；${skipped} 組已存在，已略過`;
+              bootStatus = i18nMsg().shareImportedPartial(newProfiles.length, skipped);
             }
             clearShareHash();
           }
@@ -316,6 +442,10 @@ function App() {
       setHiddenItemIds(nextHiddenItemIds);
       setCircuits(nextCircuits);
       setCircuitSchemes(nextCircuitSchemes);
+      setInsignias(nextInsignias);
+      setInsigniaSchemes(nextInsigniaSchemes);
+      setProfessionOverrides(nextProfessionOverrides);
+      setCustomProfessions(nextCustomProfessions);
       setCompareIds(nextCompareIds);
       setActiveProfileId(nextActiveProfileId);
       if (bootStatus) setStatus(bootStatus);
@@ -338,6 +468,10 @@ function App() {
       hiddenItemIds,
       circuits,
       circuitSchemes,
+      insignias,
+      insigniaSchemes,
+      professionOverrides,
+      customProfessions,
       compareIds,
       activeProfileId,
     });
@@ -350,6 +484,10 @@ function App() {
     hiddenItemIds,
     circuits,
     circuitSchemes,
+    insignias,
+    insigniaSchemes,
+    professionOverrides,
+    customProfessions,
     compareIds,
     activeProfileId,
   ]);
@@ -394,7 +532,12 @@ function App() {
     });
   }
 
-  function profileResult(profile: Profile) {
+  function profileResult(
+    profile: Profile,
+    schemeOverride?: CircuitScheme | null,
+    insigniaOverride?: InsigniaScheme | null,
+    extraProfessionOverrides?: ProfessionOverride[],
+  ) {
     const bags: StatBag[] = [];
     for (const eqId of Object.values(profile.equipped)) {
       if (!eqId) continue;
@@ -405,37 +548,117 @@ function App() {
       const item = itemsById.get(itemId);
       if (item) bags.push(item.stats);
     }
-    if (profile.circuitSchemeId) {
-      const scheme = schemesById.get(profile.circuitSchemeId);
-      if (scheme) {
-        bags.push(
-          schemeContribution(
-            scheme,
-            circuitsById,
-            profile.element ?? "all",
-            profile.damageType,
-          ).bag,
-        );
+    const scheme =
+      schemeOverride !== undefined
+        ? schemeOverride
+        : profile.circuitSchemeId
+          ? (schemesById.get(profile.circuitSchemeId) ?? null)
+          : null;
+    if (scheme) {
+      bags.push(
+        schemeContribution(
+          scheme,
+          circuitsById,
+          profile.element ?? "all",
+          profile.damageType,
+        ).bag,
+      );
+    }
+    const insigniaScheme =
+      insigniaOverride !== undefined
+        ? insigniaOverride
+        : profile.insigniaSchemeId
+          ? (insigniaSchemesById.get(profile.insigniaSchemeId) ?? null)
+          : null;
+    if (insigniaScheme) {
+      bags.push(
+        insigniaSchemeContribution(
+          insigniaScheme,
+          insigniasById,
+          profile.element ?? "all",
+        ).bag,
+      );
+    }
+    let overridesForResolve = professionOverrides;
+    if (extraProfessionOverrides?.length) {
+      overridesForResolve = professionOverrides;
+      for (const patch of extraProfessionOverrides) {
+        overridesForResolve = upsertProfessionOverride(overridesForResolve, patch);
       }
     }
+    const profession = resolveProfession(
+      profile.professionId,
+      overridesForResolve,
+      customProfessions,
+    );
+    if (profession) {
+      bags.push(profession.passives);
+    }
     const effective = resolveEffectiveStats(profile.base, bags, profile.damageType);
-    return calculateDamage(effective);
+    const applied = applyProfessionCycle(effective, profession);
+    return calculateDamage(applied.stats);
   }
 
   const activeResult = activeProfile ? profileResult(activeProfile) : null;
+  const statsWithoutSchemes = activeProfile
+    ? profileResult(activeProfile, null, null).effectiveStats
+    : null;
   const activeCircuitScheme = activeProfile?.circuitSchemeId
     ? schemesById.get(activeProfile.circuitSchemeId)
     : undefined;
-  const activeCircuitLines = activeCircuitScheme
-    ? contributionLines(
-        schemeContribution(
-          activeCircuitScheme,
-          circuitsById,
-          activeProfile?.element ?? "all",
-          activeProfile?.damageType ?? "magic",
-        ),
+  const activeCircuitContrib = activeCircuitScheme
+    ? schemeContribution(
+        activeCircuitScheme,
+        circuitsById,
+        activeProfile?.element ?? "all",
+        activeProfile?.damageType ?? "magic",
       )
     : null;
+  const activeCircuitLines = activeCircuitContrib
+    ? contributionLines(activeCircuitContrib)
+    : null;
+  const activeInsigniaScheme = activeProfile?.insigniaSchemeId
+    ? insigniaSchemesById.get(activeProfile.insigniaSchemeId)
+    : undefined;
+  const activeInsigniaContrib = activeInsigniaScheme
+    ? insigniaSchemeContribution(
+        activeInsigniaScheme,
+        insigniasById,
+        activeProfile?.element ?? "all",
+      )
+    : null;
+  const activeInsigniaLines = activeInsigniaContrib
+    ? insigniaContributionLines(activeInsigniaContrib)
+    : null;
+  const activeSchemeBonuses = bagToStatBonuses(
+    mergeStatBags([
+      ...(activeCircuitContrib ? [activeCircuitContrib.bag] : []),
+      ...(activeInsigniaContrib ? [activeInsigniaContrib.bag] : []),
+    ]),
+    activeProfile?.damageType ?? "magic",
+  );
+  const activeInsigniaComparison = useMemo(() => {
+    if (!activeProfile || !activeInsigniaScheme) return null;
+    return compareSchemeInsignias(
+      activeInsigniaScheme,
+      insignias,
+      insigniasById,
+      (scheme) => profileResult(activeProfile, undefined, scheme).finalDamage,
+    );
+    // profileResult is recreated each render; depend on its inputs instead.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    activeProfile,
+    activeInsigniaScheme,
+    insignias,
+    insigniasById,
+    circuits,
+    circuitSchemes,
+    allEquipment,
+    allItems,
+    professionOverrides,
+    customProfessions,
+  ]);
 
   // Preserve compareIds order (first entry is the baseline).
   const compareProfiles = useMemo(() => {
@@ -452,10 +675,82 @@ function App() {
         result: profileResult(p),
       })),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [compareProfiles, allEquipment, allItems, circuits, circuitSchemes, monsterDef],
+    [compareProfiles, allEquipment, allItems, circuits, circuitSchemes, insignias, insigniaSchemes, professionOverrides, customProfessions, monsterDef],
   );
 
   const baselineDamage = compareResults[0]?.result.finalDamage ?? activeResult?.finalDamage ?? 1;
+  const compareRanked = useMemo(() => {
+    const rows = compareResults.map(({ profile, result }) => {
+      const bound = configCompareDamage(
+        profile.observedTrainingDamage,
+        result.trainingDamage,
+      );
+      return {
+        profile,
+        formulaTraining: result.trainingDamage,
+        damage: bound.value,
+        source: bound.source,
+      };
+    });
+    const baselineId = compareResults[0]?.profile.id;
+    const baseline =
+      rows.find((row) => row.profile.id === baselineId)?.damage ??
+      rows[0]?.damage ??
+      0;
+    return rankConfigDamage(rows, baseline);
+  }, [compareResults]);
+  const baselineTraining =
+    compareRanked.find((row) => row.profile.id === compareResults[0]?.profile.id)
+      ?.damage ??
+    compareResults[0]?.result.trainingDamage ??
+    activeResult?.trainingDamage ??
+    1;
+  const activeProfession = activeProfile
+    ? resolveProfession(
+        activeProfile.professionId,
+        professionOverrides,
+        customProfessions,
+      )
+    : null;
+  const activeCycle = activeProfession
+    ? resolvedCycleMultiplier(
+        activeProfession.cycleMultiplier,
+        activeProfession.skills,
+      )
+    : 1;
+
+  function applyProfessionToActive(profession: ProfessionDef): void {
+    if (!activeProfile) {
+      setStatus(m.pickProfileFirst);
+      return;
+    }
+    updateProfile(activeProfile.id, {
+      professionId: profession.id,
+      damageType: profession.damageType,
+      element: profession.defaultElement,
+    });
+    setStatus(
+      m.appliedProfession(
+        professionNameLabel(profession.id, locale, profession.name),
+        activeProfile.name,
+      ),
+    );
+  }
+
+  function chooseProfileProfession(raw: string): void {
+    if (!activeProfile) return;
+    if (!raw) {
+      updateProfile(activeProfile.id, { professionId: null });
+      return;
+    }
+    const profession = resolveProfession(
+      raw as ProfessionDef["id"],
+      professionOverrides,
+      customProfessions,
+    );
+    if (!profession) return;
+    applyProfessionToActive(profession);
+  }
 
   function scrollEditorIntoViewIfNarrow(): void {
     requestAnimationFrame(() => {
@@ -472,11 +767,11 @@ function App() {
   }
 
   function addProfile(): void {
-    const p = blankProfile(`配置 ${profiles.length + 1}`);
+    const p = blankProfile(m.defaultProfileName(profiles.length + 1));
     setProfiles((list) => [p, ...list]);
     setActiveProfileId(p.id);
     setTab("profiles");
-    setStatus("已新增配置");
+    setStatus(m.addedProfile);
     scrollEditorIntoViewIfNarrow();
   }
 
@@ -484,13 +779,13 @@ function App() {
     const copy: Profile = {
       ...structuredClone(profile),
       id: makeId("profile"),
-      name: `${profile.name} (複製)`,
+      name: `${profile.name}${m.copiedSuffix}`,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
     setProfiles((list) => [copy, ...list]);
     setActiveProfileId(copy.id);
-    setStatus("已複製配置");
+    setStatus(m.copiedProfile);
     scrollEditorIntoViewIfNarrow();
   }
 
@@ -501,11 +796,11 @@ function App() {
     try {
       await navigator.clipboard.writeText(url);
     } catch {
-      window.prompt("複製分享連結：", url);
+      window.prompt(m.promptCopyLink, url);
     }
     const warn =
       url.length > SHARE_URL_WARN_LENGTH
-        ? `（連結較長 ${url.length} 字，部分通訊軟體可能截斷）`
+        ? m.urlLongWarn(url.length)
         : "";
     setStatus(`${label}${warn}`);
   }
@@ -542,6 +837,18 @@ function App() {
         );
       }
     }
+    if (profile.insigniaSchemeId) {
+      const scheme = insigniaSchemesById.get(profile.insigniaSchemeId);
+      if (scheme) {
+        bags.push(
+          insigniaSchemeContribution(
+            scheme,
+            insigniasById,
+            profile.element ?? "all",
+          ).bag,
+        );
+      }
+    }
     return resolveEffectiveStats(profile.base, bags, profile.damageType);
   }
 
@@ -550,7 +857,7 @@ function App() {
    */
   async function shareProfilesFull(list: Profile[]): Promise<void> {
     if (list.length === 0) {
-      setStatus("請先勾選「比較」或選擇要分享的配置");
+      setStatus(m.shareNeedSelect);
       return;
     }
     try {
@@ -560,16 +867,18 @@ function App() {
         itemsById,
         circuitsById,
         schemesById,
+        insigniasById,
+        insigniaSchemesById,
       );
       const fragment = await encodeShareFragment(payload);
       const url = buildShareUrl(fragment);
       const label =
         list.length === 1
-          ? `已複製「${list[0]!.name}」完整分享連結`
-          : `已複製 ${list.length} 組配置的完整分享連結`;
+          ? m.copiedFullOne(list[0]!.name)
+          : m.copiedFullMany(list.length);
       await copyShareUrl(url, label);
     } catch {
-      setStatus("產生分享連結失敗");
+      setStatus(m.shareFullFail);
     }
   }
 
@@ -578,7 +887,7 @@ function App() {
    */
   async function shareProfilesStats(list: Profile[]): Promise<void> {
     if (list.length === 0) {
-      setStatus("請先勾選「比較」或選擇要分享的配置");
+      setStatus(m.shareNeedSelect);
       return;
     }
     try {
@@ -591,17 +900,17 @@ function App() {
       const url = buildShareUrl(fragment);
       const label =
         list.length === 1
-          ? `已複製「${list[0]!.name}」數值分享連結`
-          : `已複製 ${list.length} 組配置的數值分享連結`;
+          ? m.copiedStatsOne(list[0]!.name)
+          : m.copiedStatsMany(list.length);
       await copyShareUrl(url, label);
     } catch {
-      setStatus("產生數值分享連結失敗");
+      setStatus(m.shareStatsFail);
     }
   }
 
   async function shareActiveProfile(): Promise<void> {
     if (!activeProfile) {
-      setStatus("請先選擇要分享的配置");
+      setStatus(m.shareNeedProfile);
       return;
     }
     await shareProfilesFull([activeProfile]);
@@ -609,7 +918,7 @@ function App() {
 
   async function shareActiveProfileStats(): Promise<void> {
     if (!activeProfile) {
-      setStatus("請先選擇要分享的配置");
+      setStatus(m.shareNeedProfile);
       return;
     }
     await shareProfilesStats([activeProfile]);
@@ -623,13 +932,127 @@ function App() {
     await shareProfilesStats(getSelectedProfiles());
   }
 
+  function applyImportedCircuitScheme(bundle: CircuitSchemeBundle): Profile {
+    const now = new Date().toISOString();
+    setCircuits((list) => [...bundle.pieces, ...list]);
+    setCircuitSchemes((list) => [bundle.scheme, ...list]);
+    if (activeProfile) {
+      const next: Profile = {
+        ...activeProfile,
+        circuitSchemeId: bundle.scheme.id,
+        updatedAt: now,
+      };
+      setProfiles((list) =>
+        list.map((p) => (p.id === activeProfile.id ? next : p)),
+      );
+      return next;
+    }
+    const created: Profile = {
+      ...blankProfile(m.defaultProfileName(profiles.length + 1)),
+      circuitSchemeId: bundle.scheme.id,
+    };
+    setProfiles((list) => [created, ...list]);
+    setActiveProfileId(created.id);
+    return created;
+  }
+
+  function applyImportedInsigniaScheme(bundle: InsigniaSchemeBundle): Profile {
+    const now = new Date().toISOString();
+    setInsignias((list) => [...bundle.pieces, ...list]);
+    setInsigniaSchemes((list) => [bundle.scheme, ...list]);
+    if (activeProfile) {
+      const next: Profile = {
+        ...activeProfile,
+        insigniaSchemeId: bundle.scheme.id,
+        updatedAt: now,
+      };
+      setProfiles((list) =>
+        list.map((p) => (p.id === activeProfile.id ? next : p)),
+      );
+      return next;
+    }
+    const created: Profile = {
+      ...blankProfile(m.defaultProfileName(profiles.length + 1)),
+      insigniaSchemeId: bundle.scheme.id,
+    };
+    setProfiles((list) => [created, ...list]);
+    setActiveProfileId(created.id);
+    return created;
+  }
+
+  function openProfileWithAppliedScheme(profile: Profile, message: string): void {
+    setActiveProfileId(profile.id);
+    setTab("profiles");
+    setStatus(message);
+    scrollEditorIntoViewIfNarrow();
+  }
+
+  async function importCircuitSchemeFromCode(code: string): Promise<void> {
+    const decoded = await decodeCircuitSchemeCode(code);
+    if (!decoded) {
+      throw new Error(m.badCircuitCode);
+    }
+    const bundle = finalizeCircuitSchemeImport(
+      decoded,
+      circuitSchemes.map((s) => s.name),
+    );
+    const profile = applyImportedCircuitScheme(bundle);
+    openProfileWithAppliedScheme(
+      profile,
+      m.importedCircuit(bundle.scheme.name, profile.name),
+    );
+  }
+
+  async function importInsigniaSchemeFromCode(code: string): Promise<void> {
+    const decoded = await decodeInsigniaSchemeCode(code);
+    if (!decoded) {
+      throw new Error(m.badInsigniaCode);
+    }
+    const bundle = finalizeInsigniaSchemeImport(
+      decoded,
+      insigniaSchemes.map((s) => s.name),
+    );
+    const profile = applyImportedInsigniaScheme(bundle);
+    openProfileWithAppliedScheme(
+      profile,
+      m.importedInsignia(bundle.scheme.name, profile.name),
+    );
+  }
+
+  async function importSchemeOntoActiveProfile(code: string): Promise<void> {
+    const kind = peekSchemeShareKind(code);
+    if (kind === "circuit") {
+      await importCircuitSchemeFromCode(code);
+      return;
+    }
+    if (kind === "insignia") {
+      await importInsigniaSchemeFromCode(code);
+      return;
+    }
+    throw new Error(m.badSchemeCode);
+  }
+
+  async function exportActiveProfileCircuitScheme(): Promise<string> {
+    if (!activeCircuitScheme) {
+      throw new Error(m.noCircuitOnProfile);
+    }
+    return encodeCircuitSchemeCode(activeCircuitScheme, circuitsById);
+  }
+
+  async function exportActiveProfileInsigniaScheme(): Promise<string> {
+    if (!activeInsigniaScheme) {
+      throw new Error(m.noInsigniaOnProfile);
+    }
+    return encodeInsigniaSchemeCode(activeInsigniaScheme, insigniasById);
+  }
+
   function deleteProfile(id: string): void {
     setProfiles((list) => list.filter((p) => p.id !== id));
     setCompareIds((ids) => ids.filter((x) => x !== id));
     if (activeProfileId === id) {
       setActiveProfileId(profiles.find((p) => p.id !== id)?.id ?? null);
     }
-    setStatus("已刪除配置");
+    setStatus(m.deletedProfile);
   }
 
   function toggleCompare(id: string): void {
@@ -669,7 +1092,7 @@ function App() {
     setEditingGearId(null);
     setGearName("");
     setGearSlot("項鍊");
-    setGearSet("自訂");
+    setGearSet(m.customDefault);
     setGearStats("");
     setGearEffects("");
   }
@@ -684,7 +1107,7 @@ function App() {
     setEditingGearId(eq.id);
     setGearName(eq.name);
     setGearSlot(eq.slot);
-    setGearSet(eq.set ?? "自訂");
+    setGearSet(eq.set ?? m.customDefault);
     setGearStats(statsToText(eq.stats, eq.statLines));
     setGearEffects((eq.effects ?? []).join("\n"));
     setTab("gear");
@@ -701,7 +1124,7 @@ function App() {
 
   function saveGearForm(): void {
     if (!gearName.trim()) {
-      setStatus("請輸入裝備名稱");
+      setStatus(m.needGearName);
       return;
     }
     const { stats, lines } = parseStatLines(gearStats);
@@ -713,9 +1136,9 @@ function App() {
       id: editingGearId ?? makeId("gear"),
       name: gearName.trim(),
       slot: gearSlot,
-      set: gearSet.trim() || "自訂",
+      set: gearSet.trim() || m.customDefault,
       stats,
-      statLines: lines.length ? lines : ["（無解析到的數值）"],
+      statLines: lines.length ? lines : [m.noParsedStats],
       effects,
       source: "custom",
       demo: false,
@@ -733,13 +1156,13 @@ function App() {
     });
     // if it was hidden, unhide on save
     setHiddenEquipmentIds((ids) => ids.filter((id) => id !== base.id));
-    setStatus(editingGearId ? `已更新裝備：${base.name}` : `已新增裝備：${base.name}`);
+    setStatus(editingGearId ? m.updatedGear(base.name) : m.addedGear(base.name));
     resetGearForm();
   }
 
   function saveItemForm(): void {
     if (!itemName.trim()) {
-      setStatus("請輸入道具名稱");
+      setStatus(m.needItemName);
       return;
     }
     const { stats, lines } = parseStatLines(itemStats);
@@ -748,7 +1171,7 @@ function App() {
       name: itemName.trim(),
       kind: "item",
       stats,
-      statLines: lines.length ? lines : ["（無解析到的數值）"],
+      statLines: lines.length ? lines : [m.noParsedStats],
       demo: false,
     };
 
@@ -762,7 +1185,7 @@ function App() {
       return [base, ...list];
     });
     setHiddenItemIds((ids) => ids.filter((id) => id !== base.id));
-    setStatus(editingItemId ? `已更新道具：${base.name}` : `已新增道具：${base.name}`);
+    setStatus(editingItemId ? m.updatedItem(base.name) : m.addedItem(base.name));
     resetItemForm();
   }
 
@@ -805,7 +1228,7 @@ function App() {
     detachGearFromProfiles(ids);
     setSelectedGearIds((sel) => sel.filter((id) => !idSet.has(id)));
     if (editingGearId && idSet.has(editingGearId)) resetGearForm();
-    setStatus(`已刪除 ${ids.length} 件裝備`);
+    setStatus(m.deletedGearN(ids.length));
   }
 
   function deleteItemIds(ids: string[]): void {
@@ -824,7 +1247,7 @@ function App() {
     detachItemsFromProfiles(ids);
     setSelectedItemIds((sel) => sel.filter((id) => !idSet.has(id)));
     if (editingItemId && idSet.has(editingItemId)) resetItemForm();
-    setStatus(`已刪除 ${ids.length} 件道具`);
+    setStatus(m.deletedItemN(ids.length));
   }
 
   function toggleGearSelect(id: string): void {
@@ -851,8 +1274,8 @@ function App() {
       if (result.created.length === 0 && result.updated.length === 0) {
         setStatus(
           result.errors.length
-            ? `匯入失敗：${result.errors.slice(0, 3).join("；")}`
-            : "匯入失敗：CSV 沒有有效列",
+            ? m.importFailErrors(result.errors.slice(0, 3).join("; "))
+            : m.importFailEmpty,
         );
         return;
       }
@@ -864,13 +1287,13 @@ function App() {
       ];
       setHiddenEquipmentIds((ids) => ids.filter((id) => !touchIds.includes(id)));
       const errNote = result.errors.length
-        ? `（${result.errors.length} 列略過）`
+        ? m.skippedRows(result.errors.length)
         : "";
       setStatus(
-        `裝備匯入完成：新增 ${result.created.length}、更新 ${result.updated.length}${errNote}`,
+        m.gearImportDone(result.created.length, result.updated.length, errNote),
       );
     } catch {
-      setStatus("裝備 CSV 匯入失敗");
+      setStatus(m.gearCsvFail);
     }
   }
 
@@ -886,8 +1309,8 @@ function App() {
       if (result.created.length === 0 && result.updated.length === 0) {
         setStatus(
           result.errors.length
-            ? `匯入失敗：${result.errors.slice(0, 3).join("；")}`
-            : "匯入失敗：CSV 沒有有效列",
+            ? m.importFailErrors(result.errors.slice(0, 3).join("; "))
+            : m.importFailEmpty,
         );
         return;
       }
@@ -898,13 +1321,13 @@ function App() {
       ];
       setHiddenItemIds((ids) => ids.filter((id) => !touchIds.includes(id)));
       const errNote = result.errors.length
-        ? `（${result.errors.length} 列略過）`
+        ? m.skippedRows(result.errors.length)
         : "";
       setStatus(
-        `道具匯入完成：新增 ${result.created.length}、更新 ${result.updated.length}${errNote}`,
+        m.itemImportDone(result.created.length, result.updated.length, errNote),
       );
     } catch {
-      setStatus("道具 CSV 匯入失敗");
+      setStatus(m.itemCsvFail);
     }
   }
 
@@ -920,6 +1343,10 @@ function App() {
             hiddenItemIds,
             circuits,
             circuitSchemes,
+            insignias,
+            insigniaSchemes,
+            professionOverrides,
+            customProfessions,
             compareIds,
           },
           null,
@@ -934,7 +1361,7 @@ function App() {
     a.download = "coa-dmg-calc-export.json";
     a.click();
     URL.revokeObjectURL(url);
-    setStatus("已匯出 JSON");
+    setStatus(m.exportedJson);
   }
 
   async function importAll(file: File): Promise<void> {
@@ -946,6 +1373,10 @@ function App() {
         customItems?: CatalogItem[];
         circuits?: CircuitPiece[];
         circuitSchemes?: CircuitScheme[];
+        insignias?: InsigniaPiece[];
+        insigniaSchemes?: InsigniaScheme[];
+        professionOverrides?: ProfessionOverride[];
+        customProfessions?: ProfessionDef[];
         hiddenEquipmentIds?: string[];
         hiddenItemIds?: string[];
         compareIds?: string[];
@@ -955,14 +1386,30 @@ function App() {
       if (Array.isArray(data.customItems)) setCustomItems(data.customItems);
       if (Array.isArray(data.circuits)) setCircuits(data.circuits);
       if (Array.isArray(data.circuitSchemes)) setCircuitSchemes(data.circuitSchemes);
+      if (Array.isArray(data.insignias)) setInsignias(data.insignias);
+      if (Array.isArray(data.insigniaSchemes)) setInsigniaSchemes(data.insigniaSchemes);
+      if (Array.isArray(data.professionOverrides)) {
+        setProfessionOverrides(
+          data.professionOverrides
+            .map(normalizeProfessionOverride)
+            .filter((x): x is ProfessionOverride => x !== null),
+        );
+      }
+      if (Array.isArray(data.customProfessions)) {
+        setCustomProfessions(
+          data.customProfessions
+            .map(normalizeCustomProfession)
+            .filter((x): x is ProfessionDef => x !== null),
+        );
+      }
       if (Array.isArray(data.hiddenEquipmentIds)) {
         setHiddenEquipmentIds(data.hiddenEquipmentIds);
       }
       if (Array.isArray(data.hiddenItemIds)) setHiddenItemIds(data.hiddenItemIds);
       if (Array.isArray(data.compareIds)) setCompareIds(data.compareIds);
-      setStatus("匯入完成");
+      setStatus(m.importedJson);
     } catch {
-      setStatus("匯入失敗：JSON 格式錯誤");
+      setStatus(m.jsonBad);
     }
   }
 
@@ -1002,7 +1449,7 @@ function App() {
   if (!ready) {
     return (
       <div className="app-shell">
-        <p>載入中…</p>
+        <p>{m.loading}</p>
       </div>
     );
   }
@@ -1011,21 +1458,36 @@ function App() {
     <div className="app-shell">
       <header className="hero">
         <div>
-          <h1>COA 傷害計算機</h1>
-          <p>
-            依 <strong>siumai 傷害</strong> 分頁公式計算；從裝備庫、道具與迴路方案疊加屬性，建立多組
-            Profile 並比較最終傷害。
-          </p>
+          <div className="hero-title-row">
+            <h1>{m.appTitle}</h1>
+            <div className="lang-switch" role="group" aria-label={m.langAria}>
+              <button
+                type="button"
+                className={locale === "zh" ? "active" : ""}
+                onClick={() => setLocale("zh")}
+              >
+                {m.langZh}
+              </button>
+              <button
+                type="button"
+                className={locale === "en" ? "active" : ""}
+                onClick={() => setLocale("en")}
+              >
+                {m.langEn}
+              </button>
+            </div>
+          </div>
+          <p>{m.appSubtitle}</p>
         </div>
         <div className="hero-actions">
           <button type="button" onClick={addProfile}>
-            新增配置
+            {m.addProfile}
           </button>
           <button type="button" className="secondary" onClick={exportAll}>
-            匯出
+            {m.exportJson}
           </button>
           <label className="file-button">
-            匯入
+            {m.importJson}
             <input
               type="file"
               accept="application/json"
@@ -1039,14 +1501,16 @@ function App() {
         </div>
       </header>
 
-      <nav className="tabs" aria-label="主要分頁">
+      <nav className="tabs" aria-label={m.tabsAria}>
         {(
           [
-            ["profiles", "配置 Profile", "配置"],
-            ["gear", "裝備庫", "裝備"],
-            ["items", "道具 / Buff", "道具"],
-            ["circuits", "迴路配搭", "迴路"],
-            ["compare", "傷害比較", "比較"],
+            ["profiles", m.tabProfiles, m.tabProfilesShort],
+            ["gear", m.tabGear, m.tabGearShort],
+            ["items", m.tabItems, m.tabItemsShort],
+            ["circuits", m.tabCircuits, m.tabCircuitsShort],
+            ["insignias", m.tabInsignias, m.tabInsigniasShort],
+            ["professions", m.tabProfessions, m.tabProfessionsShort],
+            ["compare", m.tabCompare, m.tabCompareShort],
           ] as const
         ).map(([id, label, shortLabel]) => (
           <button
@@ -1072,34 +1536,32 @@ function App() {
         <div className="layout-2">
           <section className="panel">
             <div className="panel-heading">
-              <h2>配置列表</h2>
+              <h2>{m.profileList}</h2>
               {compareIds.length > 0 ? (
                 <div className="panel-heading-actions">
                   <button
                     type="button"
                     className="secondary"
                     onClick={() => void shareSelectedProfiles()}
-                    title="分享已勾選「比較」的配置（含裝備/道具）"
+                    title={m.shareSelectedFullTitle}
                   >
-                    分享選取完整 ({compareIds.length})
+                    {m.shareSelectedFull(compareIds.length)}
                   </button>
                   <button
                     type="button"
                     className="secondary"
                     onClick={() => void shareSelectedProfilesStats()}
-                    title="分享已勾選「比較」的數值屬性"
+                    title={m.shareSelectedStatsTitle}
                   >
-                    分享選取數值 ({compareIds.length})
+                    {m.shareSelectedStats(compareIds.length)}
                   </button>
                 </div>
               ) : null}
             </div>
-            <p className="muted small">
-              勾選「比較」可多選配置，再用上方按鈕一次分享全部選取項。
-            </p>
+            <p className="muted small">{m.shareMultiHint}</p>
             <div className="profile-list">
               {profiles.length === 0 ? (
-                <p className="muted">尚無配置，點右上角新增。</p>
+                <p className="muted">{m.noProfiles}</p>
               ) : (
                 profiles.map((p) => {
                   const res = profileResult(p);
@@ -1123,27 +1585,49 @@ function App() {
                             type="checkbox"
                             checked={inCompare}
                             onChange={() => toggleCompare(p.id)}
-                            aria-label={`比較選取 ${p.name}`}
+                            aria-label={m.compareSelectAria(p.name)}
                           />
-                          <span className="check-label-full">比較/選取</span>
+                          <span className="check-label-full">{m.compareSelect}</span>
                         </label>
                       </div>
                       <p className="muted small profile-card-note">
-                        {p.note || "無備註"}
+                        {p.professionId
+                          ? professionNameLabel(
+                              p.professionId,
+                              locale,
+                              findProfession(p.professionId, customProfessions)
+                                ?.name,
+                            )
+                          : m.noProfessionShort}
+                        {p.note ? ` · ${p.note}` : ""}
                       </p>
                       <div className="profile-card-meta">
                         <div className="dmg-chip">
-                          <span className="dmg-chip-label">最終傷害 </span>
-                          <strong>{formatDamage(res.finalDamage)}</strong>
+                          <span className="dmg-chip-label">
+                            {configCompareDamage(
+                              p.observedTrainingDamage,
+                              res.trainingDamage,
+                            ).source === "observed"
+                              ? m.observedTag
+                              : m.trainingDummy}{" "}
+                          </span>
+                          <strong>
+                            {formatDamage(
+                              configCompareDamage(
+                                p.observedTrainingDamage,
+                                res.trainingDamage,
+                              ).value,
+                            )}
+                          </strong>
                         </div>
                         <div className="card-actions profile-card-actions">
                           <button
                             type="button"
                             onClick={() => selectProfile(p.id)}
-                            aria-label={`編輯 ${p.name}`}
-                            title="編輯"
+                            aria-label={m.editAria(p.name)}
+                            title={m.edit}
                           >
-                            <span className="action-text">編輯</span>
+                            <span className="action-text">{m.edit}</span>
                             <span className="action-icon" aria-hidden="true">
                               ✎
                             </span>
@@ -1152,10 +1636,10 @@ function App() {
                             type="button"
                             className="secondary"
                             onClick={() => duplicateProfile(p)}
-                            aria-label={`複製 ${p.name}`}
-                            title="複製"
+                            aria-label={m.copyAria(p.name)}
+                            title={m.copy}
                           >
-                            <span className="action-text">複製</span>
+                            <span className="action-text">{m.copy}</span>
                             <span className="action-icon" aria-hidden="true">
                               ⧉
                             </span>
@@ -1164,10 +1648,10 @@ function App() {
                             type="button"
                             className="danger"
                             onClick={() => deleteProfile(p.id)}
-                            aria-label={`刪除 ${p.name}`}
-                            title="刪除"
+                            aria-label={m.deleteAria(p.name)}
+                            title={m.delete}
                           >
-                            <span className="action-text">刪除</span>
+                            <span className="action-text">{m.delete}</span>
                             <span className="action-icon" aria-hidden="true">
                               ⌫
                             </span>
@@ -1185,29 +1669,29 @@ function App() {
             {activeProfile && activeResult ? (
               <>
                 <div className="panel-heading">
-                  <h2>編輯：{activeProfile.name}</h2>
+                  <h2>{m.editing(activeProfile.name)}</h2>
                   <div className="panel-heading-actions">
                     <button
                       type="button"
                       className="secondary"
                       onClick={() => void shareActiveProfile()}
-                      title="僅分享目前編輯中的這一份配置（含其裝備/道具）"
+                      title={m.shareFullTitle}
                     >
-                      分享完整
+                      {m.shareFull}
                     </button>
                     <button
                       type="button"
                       className="secondary"
                       onClick={() => void shareActiveProfileStats()}
-                      title="僅分享目前編輯中的數值屬性"
+                      title={m.shareStatsTitle}
                     >
-                      分享數值
+                      {m.shareStats}
                     </button>
                   </div>
                 </div>
                 <div className="form-grid">
                   <label>
-                    名稱
+                    {m.name}
                     <input
                       value={activeProfile.name}
                       onChange={(e) =>
@@ -1216,7 +1700,7 @@ function App() {
                     />
                   </label>
                   <label>
-                    備註
+                    {m.note}
                     <input
                       value={activeProfile.note}
                       onChange={(e) =>
@@ -1225,7 +1709,48 @@ function App() {
                     />
                   </label>
                   <label>
-                    傷害類型（影響物/魔暴擊、穿透、攻擊%）
+                    {m.observedTraining}
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      min="0"
+                      step="1"
+                      placeholder={m.observedTrainingPh}
+                      value={
+                        activeProfile.observedTrainingDamage != null
+                          ? activeProfile.observedTrainingDamage
+                          : ""
+                      }
+                      onChange={(e) =>
+                        updateProfile(activeProfile.id, {
+                          observedTrainingDamage: parseObservedDamage(
+                            e.target.value,
+                          ),
+                        })
+                      }
+                    />
+                    <span className="stat-scheme-bonus">
+                      {activeProfile.observedTrainingDamage
+                        ? m.observedTag
+                        : m.noObserved}
+                    </span>
+                  </label>
+                  <label>
+                    {m.profession}
+                    <select
+                      value={activeProfile.professionId ?? ""}
+                      onChange={(e) => chooseProfileProfession(e.target.value)}
+                    >
+                      <option value="">{m.noProfessionOption}</option>
+                      {listProfessions(customProfessions).map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {professionNameLabel(p.id, locale, p.name)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    {m.damageType}
                     <select
                       value={activeProfile.damageType}
                       onChange={(e) =>
@@ -1234,12 +1759,12 @@ function App() {
                         })
                       }
                     >
-                      <option value="magic">魔法</option>
-                      <option value="physical">物理</option>
+                      <option value="magic">{m.magic}</option>
+                      <option value="physical">{m.physical}</option>
                     </select>
                   </label>
                   <label>
-                    技能屬性（決定迴路冰/火/電/暗是否計入屬強）
+                    {m.skillElement}
                     <select
                       value={activeProfile.element ?? "all"}
                       onChange={(e) =>
@@ -1248,17 +1773,17 @@ function App() {
                         })
                       }
                     >
-                      <option value="all">全部（所有屬性皆計入）</option>
-                      <option value="ice">{CIRCUIT_ELEMENT_LABEL.ice}</option>
-                      <option value="fire">{CIRCUIT_ELEMENT_LABEL.fire}</option>
+                      <option value="all">{m.elementAll}</option>
+                      <option value="ice">{circuitElementLabel("ice")}</option>
+                      <option value="fire">{circuitElementLabel("fire")}</option>
                       <option value="electric">
-                        {CIRCUIT_ELEMENT_LABEL.electric}
+                        {circuitElementLabel("electric")}
                       </option>
-                      <option value="dark">{CIRCUIT_ELEMENT_LABEL.dark}</option>
+                      <option value="dark">{circuitElementLabel("dark")}</option>
                     </select>
                   </label>
                   <label>
-                    迴路方案
+                    {m.circuitScheme}
                     <select
                       value={activeProfile.circuitSchemeId ?? ""}
                       onChange={(e) =>
@@ -1267,28 +1792,53 @@ function App() {
                         })
                       }
                     >
-                      <option value="">— 未使用迴路 —</option>
+                      <option value="">{m.noCircuitScheme}</option>
                       {circuitSchemes.map((s) => (
                         <option key={s.id} value={s.id}>
-                          {s.name}（{equippedCount(s)}/11）
+                          {m.schemeCount(s.name, equippedCount(s))}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    {m.insigniaScheme}
+                    <select
+                      value={activeProfile.insigniaSchemeId ?? ""}
+                      onChange={(e) =>
+                        updateProfile(activeProfile.id, {
+                          insigniaSchemeId: e.target.value || null,
+                        })
+                      }
+                    >
+                      <option value="">{m.noInsigniaScheme}</option>
+                      {insigniaSchemes.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {m.schemeCount(s.name, insigniaEquippedCount(s))}
                         </option>
                       ))}
                     </select>
                   </label>
                 </div>
 
-                <h3 className="section-title">基底數值</h3>
-                <p className="muted small">
-                  這些是<strong>未再加選裝備/道具前</strong>的基底數值，可再疊加裝備庫與道具。
-                  比率類以<strong>百分比</strong>顯示（例如暴率 50 = 50%）。
-                </p>
+                <ProfileSchemeShareBox
+                  canExportCircuit={!!activeCircuitScheme}
+                  canExportInsignia={!!activeInsigniaScheme}
+                  onExportCircuit={exportActiveProfileCircuitScheme}
+                  onExportInsignia={exportActiveProfileInsigniaScheme}
+                  onImport={importSchemeOntoActiveProfile}
+                  onStatus={setStatus}
+                />
+
+                <h3 className="section-title">{m.baseStats}</h3>
+                <p className="muted small">{m.baseStatsHint}</p>
                 <div className="stats-grid">
                   {BASE_FIELDS.map(({ key, step }) => {
                     const isPercent = PERCENT_STATS.has(key);
                     const stored = Number(activeProfile.base[key] ?? 0);
+                    const bonus = activeSchemeBonuses[key] ?? 0;
                     return (
                       <label key={key}>
-                        {STAT_LABELS[key]}
+                        {statLabel(key)}
                         {isPercent ? " (%)" : ""}
                         <div className={isPercent ? "input-with-suffix" : undefined}>
                           <input
@@ -1301,12 +1851,47 @@ function App() {
                           />
                           {isPercent ? <span className="input-suffix">%</span> : null}
                         </div>
+                        {bonus ? (
+                          <span className="stat-scheme-bonus">
+                            {m.schemeBonus(formatSignedStatValue(key, bonus))}
+                          </span>
+                        ) : null}
+                        {key === "skillMultiplier" && activeProfession ? (
+                          <span className="stat-scheme-bonus">
+                            {m.cycleOnMultiplier(
+                              professionNameLabel(
+                                activeProfession.id,
+                                locale,
+                                activeProfession.name,
+                              ),
+                              activeCycle.toFixed(3),
+                              (
+                                (Number.isFinite(stored) && stored !== 0
+                                  ? stored
+                                  : 1) * activeCycle
+                              ).toFixed(3),
+                            )}
+                          </span>
+                        ) : null}
+                      </label>
+                    );
+                  })}
+                  {SCHEME_EXTRA_FIELDS.map((key) => {
+                    const bonus = activeSchemeBonuses[key] ?? 0;
+                    if (!bonus) return null;
+                    return (
+                      <label key={key} className="stat-scheme-extra">
+                        {statLabel(key)}
+                        <div className="stat-scheme-total">
+                          {formatSignedStatValue(key, bonus)}
+                        </div>
+                        <span className="stat-scheme-bonus">{m.schemeProvided}</span>
                       </label>
                     );
                   })}
                 </div>
 
-                <h3 className="section-title">裝備欄位</h3>
+                <h3 className="section-title">{m.equipSlots}</h3>
                 <div className="equip-grid">
                   {slotsInUse.map((slot) => {
                     const options = allEquipment.filter((e) => e.slot === slot);
@@ -1314,14 +1899,14 @@ function App() {
                     const current = activeProfile.equipped[slot] ?? "";
                     return (
                       <label key={slot}>
-                        {slot}
+                        {slotLabel(slot)}
                         <select
                           value={current}
                           onChange={(e) =>
                             equipSlot(slot, e.target.value || null)
                           }
                         >
-                          <option value="">— 未裝備 —</option>
+                          <option value="">{m.unequipped}</option>
                           {options.map((e) => (
                             <option key={e.id} value={e.id}>
                               {e.name}
@@ -1334,12 +1919,14 @@ function App() {
                   })}
                 </div>
 
-                <h3 className="section-title">迴路鑲嵌</h3>
+                <h3 className="section-title">{m.circuitSocket}</h3>
                 {activeCircuitScheme && activeCircuitLines ? (
                   <div className="circuit-profile-summary">
                     <p className="muted small">
-                      目前方案：<strong>{activeCircuitScheme.name}</strong>（
-                      {equippedCount(activeCircuitScheme)}/11）
+                      {m.currentScheme(
+                        activeCircuitScheme.name,
+                        equippedCount(activeCircuitScheme),
+                      )}
                     </p>
                     {activeCircuitLines.damage.length > 0 ? (
                       <ul className="stat-lines">
@@ -1348,16 +1935,47 @@ function App() {
                         ))}
                       </ul>
                     ) : (
-                      <p className="muted small">此方案尚無計入傷害的屬性。</p>
+                      <p className="muted small">{m.schemeNoDamage}</p>
                     )}
                   </div>
                 ) : (
                   <p className="muted small">
-                    尚未套用迴路方案。到「迴路配搭」分頁新增迴路並套用，或在上方選擇方案。
+                    {m.noCircuitApplied}
                   </p>
                 )}
 
-                <h3 className="section-title">道具 / Buff</h3>
+                <h3 className="section-title">{m.insigniaSocket}</h3>
+                {activeInsigniaScheme && activeInsigniaLines ? (
+                  <div className="circuit-profile-summary">
+                    <p className="muted small">
+                      {m.currentScheme(
+                        activeInsigniaScheme.name,
+                        insigniaEquippedCount(activeInsigniaScheme),
+                      )}
+                    </p>
+                    {activeInsigniaLines.damage.length > 0 ? (
+                      <ul className="stat-lines">
+                        {activeInsigniaLines.damage.map((line) => (
+                          <li key={line}>{line}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="muted small">{m.schemeNoDamage}</p>
+                    )}
+                    {activeInsigniaComparison &&
+                    activeInsigniaComparison.equipped.length > 0 ? (
+                      <InsigniaProfileGains
+                        comparison={activeInsigniaComparison}
+                      />
+                    ) : null}
+                  </div>
+                ) : (
+                  <p className="muted small">
+                    {m.noInsigniaApplied}
+                  </p>
+                )}
+
+                <h3 className="section-title">{m.itemsBuffs}</h3>
                 <div className="item-toggle-grid">
                   {allItems.map((item) => {
                     const on = activeProfile.itemIds.includes(item.id);
@@ -1380,52 +1998,78 @@ function App() {
                   })}
                 </div>
 
-                <h3 className="section-title">計算結果</h3>
+                <h3 className="section-title">{m.calcResult}</h3>
                 <div className="result-panel">
                   <div className="result-main">
                     <div>
-                      <span className="muted">最終傷害</span>
+                      <span className="muted">{m.trainingDamage}</span>
                       <div className="result-dmg">
+                        {formatDamage(
+                          configCompareDamage(
+                            activeProfile.observedTrainingDamage,
+                            activeResult.trainingDamage,
+                          ).value,
+                        )}
+                      </div>
+                      <span className="muted small">
+                        {configCompareDamage(
+                          activeProfile.observedTrainingDamage,
+                          activeResult.trainingDamage,
+                        ).source === "observed"
+                          ? `${m.observedTag} · ${m.formulaTag} ${formatDamage(activeResult.trainingDamage)}`
+                          : m.trainingNoBoss(TRAINING_DUMMY_DEF)}
+                        {activeProfession
+                          ? ` · ${m.cycleOn(professionNameLabel(activeProfession.id, locale, activeProfession.name), activeCycle.toFixed(3))}`
+                          : ""}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="muted">{m.finalDamageBoss}</span>
+                      <div className="result-sub">
                         {formatDamage(activeResult.finalDamage)}
                       </div>
                     </div>
                     <label>
-                      怪防
+                      {m.monsterDef}
                       <select
                         value={monsterDef}
                         onChange={(e) => setMonsterDef(Number(e.target.value))}
                       >
-                        {MONSTER_DEFS.map((m) => (
-                          <option key={m.value} value={m.value}>
-                            {m.label}
+                        {monsterDefs().map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
                           </option>
                         ))}
                       </select>
                     </label>
                     <div>
-                      <span className="muted">對怪有效傷害</span>
+                      <span className="muted">{m.vsMonster}</span>
                       <div className="result-sub">
                         {formatDamage(activeResult.vsMonster(monsterDef))}
                       </div>
                     </div>
                   </div>
 
-                  <h4>有效屬性</h4>
+                  <h4>{m.effectiveStats}</h4>
                   <dl className="stat-list">
                     {(Object.keys(STAT_LABELS) as Array<keyof CombatStats>).map(
                       (key) => {
+                        const value = Number(activeResult.effectiveStats[key] ?? 0);
+                        const without = Number(statsWithoutSchemes?.[key] ?? 0);
+                        const delta = value - without;
                         if (key === "attackPercent" || key === "normalAttackDamage") {
-                          const v = activeResult.effectiveStats[key] ?? 0;
-                          if (!v) return null;
+                          if (!value && !delta) return null;
                         }
                         return (
                           <div key={key}>
-                            <dt>{STAT_LABELS[key]}</dt>
+                            <dt>{statLabel(key)}</dt>
                             <dd>
-                              {formatStatValue(
-                                key,
-                                Number(activeResult.effectiveStats[key] ?? 0),
-                              )}
+                              {formatStatValue(key, value)}
+                              {delta ? (
+                                <small className="stat-scheme-bonus">
+                                  {m.schemeBonus(formatSignedStatValue(key, delta))}
+                                </small>
+                              ) : null}
                             </dd>
                           </div>
                         );
@@ -1433,7 +2077,7 @@ function App() {
                     )}
                   </dl>
 
-                  <h4>公式乘區</h4>
+                  <h4>{m.formulaZones}</h4>
                   <dl className="stat-list compact">
                     {Object.entries(activeResult.factors).map(([k, v]) => (
                       <div key={k}>
@@ -1442,15 +2086,11 @@ function App() {
                       </div>
                     ))}
                   </dl>
-                  <p className="formula-note">
-                    最終傷害 = (攻擊+破防) × (暴率×(1+爆傷)+(1−暴率)) × (1+屬強/220) ×
-                    (1+技傷+共鳴) × (1+提傷) × (1+迴路) × (1+全屬性傷害) × (1+附加) ×
-                    (1+異常+頭目) × (1+訓練場) × 技能倍率
-                  </p>
+                  <p className="formula-note">{m.formulaNote}</p>
                 </div>
               </>
             ) : (
-              <p className="muted">請選擇左側配置進行編輯。</p>
+              <p className="muted">{m.pickProfile}</p>
             )}
           </section>
         </div>
@@ -1459,63 +2099,62 @@ function App() {
       {tab === "gear" && (
         <div className="layout-2">
           <section className="panel">
-            <h2>{editingGearId ? "編輯裝備" : "新增裝備"}</h2>
+            <h2>{editingGearId ? m.editGear : m.addGear}</h2>
             <p className="muted small">
-              屬性格式（每行一項，也可用 <code>;</code> 分隔）：
-              <code>技能傷害 +12%</code>、<code>全屬性強化 +28</code>
+              {m.gearStatHint} <code>Skill DMG +12%</code>, <code>技能傷害 +12%</code>
             </p>
             <div className="form-grid">
               <label>
-                名稱
+                {m.name}
                 <input
                   value={gearName}
                   onChange={(e) => setGearName(e.target.value)}
-                  placeholder="例如：自訂 項鍊"
+                  placeholder={m.gearNamePh}
                 />
               </label>
               <label>
-                部位
+                {m.slot}
                 <select
                   value={gearSlot}
                   onChange={(e) => setGearSlot(e.target.value)}
                 >
                   {slotsInUse.map((s) => (
                     <option key={s} value={s}>
-                      {s}
+                      {slotLabel(s)}
                     </option>
                   ))}
-                  <option value="其他">其他</option>
+                  <option value="其他">{m.otherSlot}</option>
                 </select>
               </label>
               <label>
-                套裝
+                {m.setName}
                 <input
                   value={gearSet}
                   onChange={(e) => setGearSet(e.target.value)}
-                  placeholder="自訂 / 套裝名"
+                  placeholder={m.setPh}
                 />
               </label>
               <label>
-                屬性（多行）
+                {m.statsMultiline}
                 <textarea
                   rows={6}
                   value={gearStats}
                   onChange={(e) => setGearStats(e.target.value)}
-                  placeholder={"技能傷害 +12%\n全屬性強化 +28\n對頭目傷害 +11%"}
+                  placeholder={m.gearStatsPh}
                 />
               </label>
               <label>
-                特效說明（選填，每行一則）
+                {m.effectsOptional}
                 <textarea
                   rows={3}
                   value={gearEffects}
                   onChange={(e) => setGearEffects(e.target.value)}
-                  placeholder="特效文字…"
+                  placeholder={m.effectsPh}
                 />
               </label>
               <div className="form-actions">
                 <button type="button" onClick={saveGearForm}>
-                  {editingGearId ? "儲存變更" : "新增裝備"}
+                  {editingGearId ? m.saveChanges : m.addGear}
                 </button>
                 {editingGearId ? (
                   <button
@@ -1523,18 +2162,14 @@ function App() {
                     className="secondary"
                     onClick={resetGearForm}
                   >
-                    取消編輯
+                    {m.cancelEdit}
                   </button>
                 ) : null}
               </div>
             </div>
 
-            <h3 className="section-title">批次匯入 / 範本</h3>
-            <p className="muted small">
-              CSV 欄位：<code>id,name,slot,set,stats,effects</code>。
-              有 <code>id</code> 且已存在則更新，否則新增。
-              <code>stats</code> 用分號分隔多項屬性。
-            </p>
+            <h3 className="section-title">{m.batchImport}</h3>
+            <p className="muted small">{m.gearCsvHint}</p>
             <div className="form-actions">
               <button
                 type="button"
@@ -1543,7 +2178,7 @@ function App() {
                   downloadText("equipment-template.csv", GEAR_CSV_TEMPLATE)
                 }
               >
-                下載 CSV 範本
+                {m.downloadCsvTemplate}
               </button>
               <button
                 type="button"
@@ -1552,10 +2187,10 @@ function App() {
                   downloadText("equipment-export.csv", equipmentToCsv(allEquipment))
                 }
               >
-                匯出目前裝備 CSV
+                {m.exportGearCsv}
               </button>
               <label className="file-button">
-                批次匯入 CSV
+                {m.importCsv}
                 <input
                   ref={gearImportRef}
                   type="file"
@@ -1568,17 +2203,17 @@ function App() {
 
           <section className="panel">
             <h2>
-              裝備庫{" "}
+              {m.tabGear}{" "}
               <span className="muted small">
                 ({filteredGear.length} / {allEquipment.length})
               </span>
             </h2>
             <p className="muted small">
-              示範資料來自 Excel「acc set」+「裝備」。自訂 / 覆寫標 ★。可多選後批次刪除。
+              {m.gearLibHint}
             </p>
             <div className="filter-row">
               <input
-                placeholder="搜尋名稱 / 套裝 / 部位"
+                placeholder={m.searchGear}
                 value={gearFilter}
                 onChange={(e) => setGearFilter(e.target.value)}
               />
@@ -1586,10 +2221,10 @@ function App() {
                 value={slotFilter}
                 onChange={(e) => setSlotFilter(e.target.value)}
               >
-                <option value="all">全部部位</option>
+                <option value="all">{m.allSlots}</option>
                 {slotsInUse.map((s) => (
                   <option key={s} value={s}>
-                    {s}
+                    {slotLabel(s)}
                   </option>
                 ))}
               </select>
@@ -1612,10 +2247,10 @@ function App() {
                     }
                   }}
                 />
-                全選目前列表
+                {m.selectAllVisible}
               </label>
               <span className="muted small">
-                已選 {selectedGearIds.length} 件
+                {m.selectedCount(selectedGearIds.length)}
               </span>
               <button
                 type="button"
@@ -1623,15 +2258,13 @@ function App() {
                 disabled={selectedGearIds.length === 0}
                 onClick={() => {
                   if (
-                    window.confirm(
-                      `確定刪除選取的 ${selectedGearIds.length} 件裝備？`,
-                    )
+                    window.confirm(m.confirmDeleteGearN(selectedGearIds.length))
                   ) {
                     deleteEquipmentIds(selectedGearIds);
                   }
                 }}
               >
-                刪除選取
+                {m.deleteSelected}
               </button>
             </div>
             <div className="gear-list">
@@ -1666,18 +2299,18 @@ function App() {
                       </div>
                       <div className="card-actions tight">
                         <button type="button" onClick={() => startEditGear(e)}>
-                          編輯
+                          {m.edit}
                         </button>
                         <button
                           type="button"
                           className="danger"
                           onClick={() => {
-                            if (window.confirm(`刪除「${e.name}」？`)) {
+                            if (window.confirm(m.confirmDeleteNamed(e.name))) {
                               deleteEquipmentIds([e.id]);
                             }
                           }}
                         >
-                          刪除
+                          {m.delete}
                         </button>
                       </div>
                     </div>
@@ -1688,7 +2321,7 @@ function App() {
                     </ul>
                     {e.effects.length > 0 ? (
                       <details>
-                        <summary>特效說明</summary>
+                        <summary>{m.effectsSummary}</summary>
                         <ul className="effect-lines">
                           {e.effects.map((fx) => (
                             <li key={fx}>{fx}</li>
@@ -1707,28 +2340,28 @@ function App() {
       {tab === "items" && (
         <div className="layout-2">
           <section className="panel">
-            <h2>{editingItemId ? "編輯道具 / Buff" : "新增道具 / Buff"}</h2>
+            <h2>{editingItemId ? m.editItem : m.addItem}</h2>
             <div className="form-grid">
               <label>
-                名稱
+                {m.name}
                 <input
                   value={itemName}
                   onChange={(e) => setItemName(e.target.value)}
-                  placeholder="例如：活動 Buff"
+                  placeholder={m.itemNamePh}
                 />
               </label>
               <label>
-                屬性（多行）
+                {m.statsMultiline}
                 <textarea
                   rows={5}
                   value={itemStats}
                   onChange={(e) => setItemStats(e.target.value)}
-                  placeholder={"全屬性傷害 +17%\n附加傷害 +15%"}
+                  placeholder={m.itemStatsPh}
                 />
               </label>
               <div className="form-actions">
                 <button type="button" onClick={saveItemForm}>
-                  {editingItemId ? "儲存變更" : "新增道具"}
+                  {editingItemId ? m.saveChanges : m.addItemBtn}
                 </button>
                 {editingItemId ? (
                   <button
@@ -1736,17 +2369,14 @@ function App() {
                     className="secondary"
                     onClick={resetItemForm}
                   >
-                    取消編輯
+                    {m.cancelEdit}
                   </button>
                 ) : null}
               </div>
             </div>
 
-            <h3 className="section-title">批次匯入 / 範本</h3>
-            <p className="muted small">
-              CSV 欄位：<code>id,name,stats</code>。有 <code>id</code>{" "}
-              且已存在則更新，否則新增。
-            </p>
+            <h3 className="section-title">{m.batchImport}</h3>
+            <p className="muted small">{m.itemCsvHint}</p>
             <div className="form-actions">
               <button
                 type="button"
@@ -1755,7 +2385,7 @@ function App() {
                   downloadText("items-template.csv", ITEM_CSV_TEMPLATE)
                 }
               >
-                下載 CSV 範本
+                {m.downloadCsvTemplate}
               </button>
               <button
                 type="button"
@@ -1764,10 +2394,10 @@ function App() {
                   downloadText("items-export.csv", itemsToCsv(allItems))
                 }
               >
-                匯出目前道具 CSV
+                {m.exportItemCsv}
               </button>
               <label className="file-button">
-                批次匯入 CSV
+                {m.importCsv}
                 <input
                   ref={itemImportRef}
                   type="file"
@@ -1779,17 +2409,17 @@ function App() {
           </section>
           <section className="panel">
             <h2>
-              道具庫{" "}
+              {m.tabItems}{" "}
               <span className="muted small">
                 ({filteredItems.length} / {allItems.length})
               </span>
             </h2>
             <p className="muted small">
-              示範項目來自 siumai 傷害註記。可編輯、多選刪除、CSV 批次匯入。
+              {m.itemLibHint}
             </p>
             <div className="filter-row">
               <input
-                placeholder="搜尋名稱 / 屬性"
+                placeholder={m.searchItems}
                 value={itemFilter}
                 onChange={(e) => setItemFilter(e.target.value)}
               />
@@ -1812,10 +2442,10 @@ function App() {
                     }
                   }}
                 />
-                全選目前列表
+                {m.selectAllVisible}
               </label>
               <span className="muted small">
-                已選 {selectedItemIds.length} 件
+                {m.selectedCount(selectedItemIds.length)}
               </span>
               <button
                 type="button"
@@ -1823,15 +2453,13 @@ function App() {
                 disabled={selectedItemIds.length === 0}
                 onClick={() => {
                   if (
-                    window.confirm(
-                      `確定刪除選取的 ${selectedItemIds.length} 件道具？`,
-                    )
+                    window.confirm(m.confirmDeleteItemN(selectedItemIds.length))
                   ) {
                     deleteItemIds(selectedItemIds);
                   }
                 }}
               >
-                刪除選取
+                {m.deleteSelected}
               </button>
             </div>
             <div className="gear-list">
@@ -1864,18 +2492,18 @@ function App() {
                           type="button"
                           onClick={() => startEditItem(item)}
                         >
-                          編輯
+                          {m.edit}
                         </button>
                         <button
                           type="button"
                           className="danger"
                           onClick={() => {
-                            if (window.confirm(`刪除「${item.name}」？`)) {
+                            if (window.confirm(m.confirmDeleteNamed(item.name))) {
                               deleteItemIds([item.id]);
                             }
                           }}
                         >
-                          刪除
+                          {m.delete}
                         </button>
                       </div>
                     </div>
@@ -1901,33 +2529,71 @@ function App() {
           activeProfile={activeProfile}
           onApplyScheme={(schemeId) => {
             if (!activeProfile) {
-              setStatus("請先在「配置」分頁選擇一個配置");
+              setStatus(m.pickProfileFirst);
               return;
             }
             updateProfile(activeProfile.id, { circuitSchemeId: schemeId });
           }}
           onStatus={setStatus}
+          onImportShareCode={importCircuitSchemeFromCode}
           profileResult={profileResult}
+        />
+      )}
+
+      {tab === "insignias" && (
+        <InsigniaTab
+          insignias={insignias}
+          schemes={insigniaSchemes}
+          setInsignias={setInsignias}
+          setSchemes={setInsigniaSchemes}
+          activeProfile={activeProfile}
+          onApplyScheme={(schemeId) => {
+            if (!activeProfile) {
+              setStatus(m.pickProfileFirst);
+              return;
+            }
+            updateProfile(activeProfile.id, { insigniaSchemeId: schemeId });
+          }}
+          onStatus={setStatus}
+          onImportShareCode={importInsigniaSchemeFromCode}
+          profileResult={profileResult}
+        />
+      )}
+
+      {tab === "professions" && (
+        <ProfessionTab
+          activeProfile={activeProfile}
+          overrides={professionOverrides}
+          setOverrides={setProfessionOverrides}
+          customProfessions={customProfessions}
+          setCustomProfessions={setCustomProfessions}
+          profileResult={profileResult}
+          onApplyProfession={applyProfessionToActive}
+          onDeleteCustomProfession={(id) => {
+            setProfiles((list) =>
+              list.map((p) =>
+                p.professionId === id ? { ...p, professionId: null } : p,
+              ),
+            );
+          }}
+          onStatus={setStatus}
         />
       )}
 
       {tab === "compare" && (
         <section className="panel wide">
-          <h2>傷害比較</h2>
-          <p className="muted">
-            在配置列表勾選「比較」（最多 5 組）。列表<strong>第一個</strong>
-            為基準，可用下方箭頭調整順序。
-          </p>
+          <h2>{m.compareTitle}</h2>
+          <p className="muted">{m.compareHint}</p>
           <div className="filter-row">
             <label className="inline-label">
-              怪防
+              {m.monsterDef}
               <select
                 value={monsterDef}
                 onChange={(e) => setMonsterDef(Number(e.target.value))}
               >
-                {MONSTER_DEFS.map((m) => (
-                  <option key={m.value} value={m.value}>
-                    {m.label}
+                {monsterDefs().map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
                   </option>
                 ))}
               </select>
@@ -1937,17 +2603,28 @@ function App() {
           {compareProfiles.length > 0 ? (
             <div className="compare-order">
               <h3 className="section-title" style={{ marginTop: 0 }}>
-                比較順序
+                {m.compareOrder}
               </h3>
               <ol className="compare-order-list">
                 {compareProfiles.map((p, index) => (
                   <li key={p.id} className="compare-order-item">
                     <span className="compare-order-rank">
-                      {index === 0 ? "基準" : index + 1}
+                      {index === 0 ? m.baseline : index + 1}
                     </span>
                     <span className="compare-order-name">{p.name}</span>
                     <span className="muted small">
-                      {formatDamage(profileResult(p).finalDamage)}
+                      {formatDamage(
+                        configCompareDamage(
+                          p.observedTrainingDamage,
+                          profileResult(p).trainingDamage,
+                        ).value,
+                      )}{" "}
+                      {configCompareDamage(
+                        p.observedTrainingDamage,
+                        profileResult(p).trainingDamage,
+                      ).source === "observed"
+                        ? m.observedTag
+                        : m.trainingChip}
                     </span>
                     <div className="compare-order-actions">
                       <button
@@ -1955,8 +2632,8 @@ function App() {
                         className="secondary"
                         disabled={index === 0}
                         onClick={() => moveCompare(p.id, -1)}
-                        title="上移"
-                        aria-label={`將 ${p.name} 上移`}
+                        title={m.moveUp}
+                        aria-label={m.moveUpAria(p.name)}
                       >
                         ↑
                       </button>
@@ -1965,8 +2642,8 @@ function App() {
                         className="secondary"
                         disabled={index === compareProfiles.length - 1}
                         onClick={() => moveCompare(p.id, 1)}
-                        title="下移"
-                        aria-label={`將 ${p.name} 下移`}
+                        title={m.moveDown}
+                        aria-label={m.moveDownAria(p.name)}
                       >
                         ↓
                       </button>
@@ -1975,9 +2652,9 @@ function App() {
                         className="secondary"
                         disabled={index === 0}
                         onClick={() => setCompareBaseline(p.id)}
-                        title="設為基準（移到第一位）"
+                        title={m.setBaselineTitle}
                       >
-                        設為基準
+                        {m.setBaseline}
                       </button>
                     </div>
                   </li>
@@ -1986,20 +2663,98 @@ function App() {
             </div>
           ) : null}
 
-          {compareResults.length < 2 ? (
-            <p className="muted">請至少勾選 2 個配置。</p>
+          {compareRanked.length < 2 ? (
+            <p className="muted">{m.needTwoProfiles}</p>
           ) : (
+            <div className="compare-ratio">
+              <h3 className="section-title">{m.damageRatioTitle}</h3>
+              <p className="muted small">{m.boundDamageHint}</p>
+              <div className="compare-table-wrap">
+                <table className="compare-table profession-rank-table">
+                  <thead>
+                    <tr>
+                      <th>{m.colRank}</th>
+                      <th>{m.name}</th>
+                      <th>{m.colBoundDmg}</th>
+                      <th>{m.ratioOfBaseline}</th>
+                      <th>{m.ratioOfBest}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {compareRanked.map((row) => (
+                      <tr
+                        key={row.profile.id}
+                        className={
+                          row.profile.id === compareResults[0]?.profile.id
+                            ? "profession-row-active"
+                            : ""
+                        }
+                      >
+                        <td className="num">{row.rank}</td>
+                        <td>
+                          <strong>{row.profile.name}</strong>
+                          <div className="muted small">
+                            {row.profile.professionId
+                              ? professionNameLabel(
+                                  row.profile.professionId,
+                                  locale,
+                                  findProfession(
+                                    row.profile.professionId,
+                                    customProfessions,
+                                  )?.name,
+                                )
+                              : m.noProfessionShort}
+                            {" · "}
+                            {row.source === "observed"
+                              ? m.observedTag
+                              : m.formulaTag}
+                          </div>
+                        </td>
+                        <td className="num">
+                          <strong>{formatDamage(row.damage)}</strong>
+                          {row.source === "observed" ? (
+                            <div className="muted small">
+                              {m.formulaTag}{" "}
+                              {formatDamage(row.formulaTraining)}
+                            </div>
+                          ) : null}
+                        </td>
+                        <td className="num">
+                          {row.ratioOfBaseline.toFixed(3)}×
+                        </td>
+                        <td>
+                          <div className="profession-bar-track">
+                            <span
+                              className="profession-bar"
+                              style={{
+                                width: `${Math.max(row.ratioOfBest * 100, 2)}%`,
+                              }}
+                            />
+                          </div>
+                          <div className="num muted small">
+                            {formatRatio(row.ratioOfBest)}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {compareResults.length < 2 ? null : (
             <div className="compare-table-wrap">
               <table className="compare-table">
                 <thead>
                   <tr>
-                    <th>項目</th>
+                    <th>{m.compareItem}</th>
                     {compareResults.map(({ profile }, index) => (
                       <th key={profile.id}>
                         <div className="compare-th">
                           <span>
                             {index === 0 ? (
-                              <span className="baseline-tag">基準 · </span>
+                              <span className="baseline-tag">{m.baselineTag}</span>
                             ) : null}
                             {profile.name}
                           </span>
@@ -2009,8 +2764,8 @@ function App() {
                               className="icon-btn"
                               disabled={index === 0}
                               onClick={() => moveCompare(profile.id, -1)}
-                              title="左移"
-                              aria-label={`將 ${profile.name} 左移`}
+                              title={m.moveLeft}
+                              aria-label={m.moveLeftAria(profile.name)}
                             >
                               ←
                             </button>
@@ -2019,8 +2774,8 @@ function App() {
                               className="icon-btn"
                               disabled={index === compareResults.length - 1}
                               onClick={() => moveCompare(profile.id, 1)}
-                              title="右移"
-                              aria-label={`將 ${profile.name} 右移`}
+                              title={m.moveRight}
+                              aria-label={m.moveRightAria(profile.name)}
                             >
                               →
                             </button>
@@ -2032,7 +2787,7 @@ function App() {
                 </thead>
                 <tbody>
                   <tr>
-                    <td>迴路方案</td>
+                    <td>{m.circuitScheme}</td>
                     {compareResults.map(({ profile }) => {
                       const scheme = profile.circuitSchemeId
                         ? schemesById.get(profile.circuitSchemeId)
@@ -2045,7 +2800,78 @@ function App() {
                     })}
                   </tr>
                   <tr>
-                    <td>最終傷害</td>
+                    <td>{m.insigniaScheme}</td>
+                    {compareResults.map(({ profile }) => {
+                      const scheme = profile.insigniaSchemeId
+                        ? insigniaSchemesById.get(profile.insigniaSchemeId)
+                        : undefined;
+                      return (
+                        <td key={profile.id}>
+                          {scheme ? scheme.name : "—"}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                  <tr>
+                    <td>{m.profession}</td>
+                    {compareResults.map(({ profile }) => (
+                      <td key={profile.id}>
+                        {profile.professionId
+                          ? professionNameLabel(
+                              profile.professionId,
+                              locale,
+                              findProfession(
+                                profile.professionId,
+                                customProfessions,
+                              )?.name,
+                            )
+                          : m.noProfessionShort}
+                      </td>
+                    ))}
+                  </tr>
+                  <tr>
+                    <td>{m.boundDamage}</td>
+                    {compareResults.map(({ profile, result }) => {
+                      const bound = configCompareDamage(
+                        profile.observedTrainingDamage,
+                        result.trainingDamage,
+                      );
+                      return (
+                        <td key={profile.id} className="num">
+                          {formatDamage(bound.value)}
+                          <div className="muted small">
+                            {bound.source === "observed"
+                              ? m.observedTag
+                              : m.formulaTag}
+                          </div>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                  <tr>
+                    <td>{m.trainingDamage}</td>
+                    {compareResults.map(({ profile, result }) => (
+                      <td key={profile.id} className="num">
+                        {formatDamage(result.trainingDamage)}
+                      </td>
+                    ))}
+                  </tr>
+                  <tr>
+                    <td>{m.trainingCompare}</td>
+                    {compareResults.map(({ profile, result }) => {
+                      const bound = configCompareDamage(
+                        profile.observedTrainingDamage,
+                        result.trainingDamage,
+                      );
+                      return (
+                        <td key={profile.id} className="num">
+                          {(bound.value / Math.max(baselineTraining, 1e-9)).toFixed(4)}×
+                        </td>
+                      );
+                    })}
+                  </tr>
+                  <tr>
+                    <td>{m.finalDamage}</td>
                     {compareResults.map(({ profile, result }) => (
                       <td key={profile.id} className="num">
                         {formatDamage(result.finalDamage)}
@@ -2053,7 +2879,7 @@ function App() {
                     ))}
                   </tr>
                   <tr>
-                    <td>傷害比較（相對基準）</td>
+                    <td>{m.dmgVsBaseline}</td>
                     {compareResults.map(({ profile, result }) => (
                       <td key={profile.id} className="num">
                         {(result.finalDamage / baselineDamage).toFixed(4)}×
@@ -2061,7 +2887,7 @@ function App() {
                     ))}
                   </tr>
                   <tr>
-                    <td>提升%（基準相對此檔）</td>
+                    <td>{m.upliftVsThis}</td>
                     {compareResults.map(({ profile, result }) => {
                       const uplift =
                         (baselineDamage - result.finalDamage) /
@@ -2074,7 +2900,7 @@ function App() {
                     })}
                   </tr>
                   <tr>
-                    <td>對怪有效傷害</td>
+                    <td>{m.vsMonster}</td>
                     {compareResults.map(({ profile, result }) => (
                       <td key={profile.id} className="num">
                         {formatDamage(result.vsMonster(monsterDef))}
@@ -2085,7 +2911,7 @@ function App() {
                     .filter((k) => k !== "attackPercent")
                     .map((key) => (
                       <tr key={key}>
-                        <td>{STAT_LABELS[key]}</td>
+                        <td>{statLabel(key)}</td>
                         {compareResults.map(({ profile, result }) => (
                           <td key={profile.id} className="num">
                             {formatStatValue(
@@ -2102,7 +2928,7 @@ function App() {
           )}
 
           <div className="compare-picks">
-            <h3>快速勾選</h3>
+            <h3>{m.quickPick}</h3>
             <div className="item-toggle-grid">
               {profiles.map((p) => (
                 <label
@@ -2117,7 +2943,18 @@ function App() {
                   <span>
                     <strong>{p.name}</strong>
                     <small>
-                      {formatDamage(profileResult(p).finalDamage)} 傷害
+                      {formatDamage(
+                        configCompareDamage(
+                          p.observedTrainingDamage,
+                          profileResult(p).trainingDamage,
+                        ).value,
+                      )}{" "}
+                      {configCompareDamage(
+                        p.observedTrainingDamage,
+                        profileResult(p).trainingDamage,
+                      ).source === "observed"
+                        ? m.observedTag
+                        : m.trainingChip}
                     </small>
                   </span>
                 </label>
@@ -2128,9 +2965,69 @@ function App() {
       )}
 
       <footer className="footer muted small">
-        公式來源：Excel「siumai 傷害」· 示範裝備：「acc set」{demoData.equipment.length}{" "}
-        件（含裝備分頁）· 迴路主副屬與突破屬性（含迴路增傷）計入公式 · 本機 localStorage 儲存 · 可將配置嵌在 URL 分享
+        {m.footer(demoData.equipment.length)}
       </footer>
+    </div>
+  );
+}
+
+function InsigniaProfileGains({
+  comparison,
+}: {
+  comparison: NonNullable<ReturnType<typeof compareSchemeInsignias>>;
+}) {
+  const { m } = useI18n();
+  const maxAbs = Math.max(
+    0,
+    ...comparison.equipped.map((row) => Math.abs(row.delta)),
+  );
+  return (
+    <div className="circuit-gain-list" style={{ marginTop: 12 }}>
+      <p className="muted small">{m.insigniaMarginalHint}</p>
+      {comparison.equipped.map((row) => {
+        const width = maxAbs > 0 ? (Math.abs(row.delta) / maxAbs) * 100 : 0;
+        const sign = row.delta > 0 ? "+" : row.delta < 0 ? "−" : "";
+        const ratioSign = row.ratio > 0 ? "+" : row.ratio < 0 ? "−" : "";
+        return (
+          <div key={`${row.slot}-${row.piece.id}`} className="circuit-gain-row">
+            <div className="circuit-gain-meta">
+              <span className="circuit-gain-slot">{slotLabel(row.slot)}</span>
+              <span className={`kind-pill ${row.piece.rarity}`}>
+                {insigniaRarityLabel(row.piece.rarity)}
+              </span>
+              <span className="circuit-gain-name">
+                {row.piece.name || defaultInsigniaName(row.piece)}
+              </span>
+            </div>
+            <div className="circuit-gain-bar-track">
+              <div
+                className={`circuit-gain-bar kind-${row.piece.rarity} ${
+                  row.delta < 0 ? "neg" : ""
+                }`}
+                style={{ width: `${width}%` }}
+              />
+            </div>
+            <div
+              className={`circuit-gain-nums ${
+                row.delta > 0
+                  ? "gain-pos"
+                  : row.delta < 0
+                    ? "gain-neg"
+                    : "gain-zero"
+              }`}
+            >
+              <span>
+                {sign}
+                {formatDamage(Math.abs(row.delta))}
+              </span>
+              <span>
+                {ratioSign}
+                {formatRatio(Math.abs(row.ratio))}
+              </span>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

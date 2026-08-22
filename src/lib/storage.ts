@@ -3,11 +3,24 @@ import type {
   CircuitPiece,
   CircuitScheme,
   Equipment,
+  InsigniaPiece,
+  InsigniaScheme,
+  ProfessionDef,
+  ProfessionOverride,
   Profile,
 } from "./types";
 import demoData from "../data/demoData.json";
+import { parseObservedDamage } from "./compare";
 import { emptyStats, makeId } from "./damage";
 import { normalizeCircuitPiece, normalizeCircuitScheme } from "./circuit";
+import {
+  normalizeInsigniaPiece,
+  normalizeInsigniaScheme,
+} from "./insignia";
+import {
+  normalizeCustomProfession,
+  normalizeProfessionOverride,
+} from "./profession";
 
 const STORAGE_KEY = "coa-dmg-calc:v1";
 
@@ -17,6 +30,12 @@ export type PersistedState = {
   customItems: CatalogItem[];
   circuits: CircuitPiece[];
   circuitSchemes: CircuitScheme[];
+  insignias: InsigniaPiece[];
+  insigniaSchemes: InsigniaScheme[];
+  /** Local edits to built-in profession cycles. */
+  professionOverrides: ProfessionOverride[];
+  /** User-created professions (not in the built-in catalog). */
+  customProfessions: ProfessionDef[];
   /** Demo equipment ids the user deleted (hidden from catalog). */
   hiddenEquipmentIds: string[];
   /** Demo item ids the user deleted. */
@@ -40,6 +59,10 @@ function emptyPersistedState(): PersistedState {
     customItems: [],
     circuits: [],
     circuitSchemes: [],
+    insignias: [],
+    insigniaSchemes: [],
+    professionOverrides: [],
+    customProfessions: [],
     hiddenEquipmentIds: [],
     hiddenItemIds: [],
     compareIds: [],
@@ -52,6 +75,9 @@ function normalizeStoredProfile(raw: Profile): Profile {
     ...raw,
     element: raw.element ?? "all",
     circuitSchemeId: raw.circuitSchemeId ?? null,
+    insigniaSchemeId: raw.insigniaSchemeId ?? null,
+    professionId: raw.professionId ?? null,
+    observedTrainingDamage: parseObservedDamage(raw.observedTrainingDamage),
   };
 }
 
@@ -80,6 +106,18 @@ export function loadState(): PersistedState {
       circuitSchemes: (parsed.circuitSchemes ?? [])
         .map(normalizeCircuitScheme)
         .filter((x): x is CircuitScheme => x !== null),
+      insignias: (parsed.insignias ?? [])
+        .map(normalizeInsigniaPiece)
+        .filter((x): x is InsigniaPiece => x !== null),
+      insigniaSchemes: (parsed.insigniaSchemes ?? [])
+        .map(normalizeInsigniaScheme)
+        .filter((x): x is InsigniaScheme => x !== null),
+      professionOverrides: (parsed.professionOverrides ?? [])
+        .map(normalizeProfessionOverride)
+        .filter((x): x is ProfessionOverride => x !== null),
+      customProfessions: (parsed.customProfessions ?? [])
+        .map(normalizeCustomProfession)
+        .filter((x): x is ProfessionDef => x !== null),
       hiddenEquipmentIds: parsed.hiddenEquipmentIds ?? [],
       hiddenItemIds: parsed.hiddenItemIds ?? [],
       compareIds: parsed.compareIds ?? [],
@@ -99,6 +137,10 @@ export function saveState(state: PersistedState): void {
       customItems: state.customItems,
       circuits: state.circuits,
       circuitSchemes: state.circuitSchemes,
+      insignias: state.insignias,
+      insigniaSchemes: state.insigniaSchemes,
+      professionOverrides: state.professionOverrides,
+      customProfessions: state.customProfessions,
       hiddenEquipmentIds: state.hiddenEquipmentIds,
       hiddenItemIds: state.hiddenItemIds,
       compareIds: state.compareIds,
@@ -131,6 +173,9 @@ export function blankProfile(name = "新配置"): Profile {
     equipped: {},
     itemIds: [],
     circuitSchemeId: null,
+    insigniaSchemeId: null,
+    professionId: null,
+    observedTrainingDamage: null,
     createdAt: now,
     updatedAt: now,
   };

@@ -1,9 +1,15 @@
 import type { CatalogItem, Equipment, StatBag } from "./types";
 import { makeId } from "./damage";
+import { catalogStatLabel } from "./i18n";
 
 /** Label → stat key used by free-text / CSV stats fields. */
 export const STAT_LABEL_TO_KEY: Record<string, keyof StatBag> = {
   攻擊: "attack",
+  攻擊力: "attack",
+  物攻: "physicalAttack",
+  魔攻: "magicAttack",
+  物理攻擊: "physicalAttack",
+  魔法攻擊: "magicAttack",
   破防: "defenseBreak",
   暴率: "critRate",
   暴擊: "critRate",
@@ -41,10 +47,66 @@ export const STAT_LABEL_TO_KEY: Record<string, keyof StatBag> = {
   攻速: "attackSpeed",
   冷卻速度: "cooldownSpeed",
   共鳴充能效率: "resonanceCharge",
+  Attack: "attack",
+  ATK: "attack",
+  "P.ATK": "physicalAttack",
+  "Physical Attack": "physicalAttack",
+  "M.ATK": "magicAttack",
+  "Magic Attack": "magicAttack",
+  "DEF Break": "defenseBreak",
+  "Defense Break": "defenseBreak",
+  "Crit Rate": "critRate",
+  Crit: "critRate",
+  "Magic Crit Rate": "critRateMagic",
+  "Crit DMG": "critDamage",
+  "Crit Damage": "critDamage",
+  "Elem. Power": "elementalPower",
+  "Elemental Power": "elementalPower",
+  "All Element Enhance": "elementalPower",
+  "Skill DMG": "skillDamage",
+  "Skill Damage": "skillDamage",
+  Resonance: "resonance",
+  "DMG Boost": "damageBoost",
+  "Damage Boost": "damageBoost",
+  "Circuit Boost": "circuitBoost",
+  "All Elem. DMG": "allElementDamage",
+  "All Element Damage": "allElementDamage",
+  "Bonus DMG": "additionalDamage",
+  "Additional Damage": "additionalDamage",
+  Status: "statusDamage",
+  "Status Damage": "statusDamage",
+  Boss: "bossDamage",
+  "Boss Damage": "bossDamage",
+  Penetration: "penetration",
+  "Magic Pen": "penetrationMagic",
+  "Magic Penetration": "penetrationMagic",
+  "ATK%": "attackPercent",
+  "P.ATK%": "attackPercent",
+  "M.ATK%": "attackPercentMagic",
+  INT: "intPercent",
+  Intelligence: "intPercent",
+  STR: "strPercent",
+  Strength: "strPercent",
+  "Normal ATK DMG": "normalAttackDamage",
+  "Normal Attack Damage": "normalAttackDamage",
+  "Training Corr.": "trainingCorrection",
+  "Training Correction": "trainingCorrection",
+  "Skill Mult.": "skillMultiplier",
+  "Skill Multiplier": "skillMultiplier",
+  "ATK Speed": "attackSpeed",
+  CDR: "cooldownSpeed",
+  Cooldown: "cooldownSpeed",
+  "Resonance Charge": "resonanceCharge",
 };
 
+const STAT_LABEL_LOOKUP_LOWER: Record<string, keyof StatBag> = Object.fromEntries(
+  Object.entries(STAT_LABEL_TO_KEY).map(([label, key]) => [label.toLowerCase(), key]),
+);
+
 const KEY_TO_LABEL: Partial<Record<keyof StatBag, string>> = {
-  attack: "攻擊",
+  attack: "攻擊力",
+  physicalAttack: "物攻",
+  magicAttack: "魔攻",
   defenseBreak: "破防",
   critRate: "暴率",
   critRateMagic: "魔法暴擊率",
@@ -74,6 +136,8 @@ const KEY_TO_LABEL: Partial<Record<keyof StatBag, string>> = {
 
 const FLAT_KEYS = new Set<keyof StatBag>([
   "attack",
+  "physicalAttack",
+  "magicAttack",
   "defenseBreak",
   "elementalPower",
   "skillMultiplier",
@@ -93,7 +157,11 @@ export function parseStatLines(text: string): { stats: StatBag; lines: string[] 
     const label = m[1].trim().replace(/%$/, "");
     const num = Number(m[2]);
     const isPct = Boolean(m[3]);
-    const key = STAT_LABEL_TO_KEY[label];
+    const normalized = label.replace(/\s+/g, " ");
+    const key =
+      STAT_LABEL_TO_KEY[normalized] ??
+      STAT_LABEL_TO_KEY[normalized.toLowerCase()] ??
+      STAT_LABEL_LOOKUP_LOWER[normalized.toLowerCase()];
     if (!key || !Number.isFinite(num)) continue;
 
     let value = num;
@@ -118,7 +186,7 @@ export function statsToText(stats: StatBag, fallbackLines?: string[]): string {
   const parts: string[] = [];
   for (const [key, value] of Object.entries(stats) as Array<[keyof StatBag, number]>) {
     if (value == null || !Number.isFinite(value) || value === 0) continue;
-    const label = KEY_TO_LABEL[key] ?? String(key);
+    const label = catalogStatLabel(String(key)) || KEY_TO_LABEL[key] || String(key);
     if (FLAT_KEYS.has(key)) {
       parts.push(`${label} +${trimNum(value)}`);
     } else {

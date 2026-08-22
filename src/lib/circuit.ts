@@ -1,4 +1,10 @@
 import { makeId } from "./damage";
+import {
+  circuitElementLabel,
+  circuitKindLabel,
+  circuitStatLabel,
+  m,
+} from "./i18n";
 import type {
   CircuitAffix,
   CircuitElement,
@@ -61,8 +67,6 @@ export const CIRCUIT_STAT_LABEL: Record<CircuitStatKey, string> = {
 export const CIRCUIT_PERCENT_STATS = new Set<CircuitStatKey>([
   "str",
   "int",
-  "pAtk",
-  "mAtk",
   "critRate",
   "critDamage",
   "atkSpeed",
@@ -184,7 +188,7 @@ export function blankCircuitPiece(kind: CircuitKind = "time"): CircuitPiece {
   };
 }
 
-export function blankCircuitScheme(name = "新方案"): CircuitScheme {
+export function blankCircuitScheme(name = m().newScheme): CircuitScheme {
   const now = new Date().toISOString();
   return {
     id: makeId("cscheme"),
@@ -197,12 +201,11 @@ export function blankCircuitScheme(name = "新方案"): CircuitScheme {
 }
 
 export function defaultCircuitName(piece: Pick<CircuitPiece, "kind" | "main">): string {
-  return `${CIRCUIT_KIND_LABEL[piece.kind]} · ${formatAffix(piece.main)}`;
+  return `${circuitKindLabel(piece.kind)} · ${formatAffix(piece.main)}`;
 }
 
 export function formatAffix(affix: CircuitAffix): string {
-  const label = CIRCUIT_STAT_LABEL[affix.stat];
-  return `${label} ${formatCircuitStatValue(affix.stat, affix.value)}`;
+  return `${circuitStatLabel(affix.stat)} ${formatCircuitStatValue(affix.stat, affix.value)}`;
 }
 
 export function formatCircuitStatValue(stat: CircuitStatKey, value: number): string {
@@ -236,14 +239,15 @@ function trimNum(n: number): string {
 }
 
 export function pieceStatLines(piece: CircuitPiece): string[] {
-  const lines = [`主：${formatAffix(piece.main)}`];
+  const msg = m();
+  const lines = [`${msg.affixMain}${formatAffix(piece.main)}`];
   for (const sub of piece.subs) {
     if (!sub.stat || !Number.isFinite(sub.value) || sub.value === 0) continue;
-    lines.push(`副：${formatAffix(sub)}`);
+    lines.push(`${msg.affixSub}${formatAffix(sub)}`);
   }
   for (const br of piece.breakthroughs ?? []) {
     if (!br.stat || !Number.isFinite(br.value) || br.value === 0) continue;
-    lines.push(`突：${formatAffix(br)}`);
+    lines.push(`${msg.affixBreak}${formatAffix(br)}`);
   }
   return lines;
 }
@@ -322,7 +326,8 @@ function addToBag(bag: StatBag, key: keyof StatBag, value: number): void {
  * Map one affix onto the damage StatBag (or extra, non-damage totals).
  *
  * Damage mappings:
- *   暴率 / 暴傷 / 技傷 / 攻擊力 / 物攻 / 魔攻 / 力量 / 智力 / 力量智力
+ *   暴率 / 暴傷 / 技傷 / 攻擊力（同時加物攻與魔攻基礎）
+ *   物攻 / 魔攻（基礎值，非百分比） / 力量 / 智力 / 力量智力
  *   迴路增傷 / 全屬性傷害 / 全屬性強化 / 提傷 / 頭目 / 異常
  *   冰火電暗 → 屬強（僅當與配置技能屬性相同，或屬性為「全部」）
  *
@@ -384,13 +389,14 @@ export function applyCircuitAffix(
       extra.agiSpr += value;
       return;
     case "attack":
+      // 攻擊力同時增加物攻與魔攻基礎值。
       addToBag(bag, "attack", value);
       return;
     case "pAtk":
-      addToBag(bag, "attackPercent", value);
+      addToBag(bag, "physicalAttack", value);
       return;
     case "mAtk":
-      addToBag(bag, "attackPercentMagic", value);
+      addToBag(bag, "magicAttack", value);
       return;
     case "str":
       addToBag(bag, "strPercent", value);
@@ -501,6 +507,165 @@ export function equippedCount(scheme: CircuitScheme): number {
   return n;
 }
 
+export type EquippedCircuit = {
+  slot: CircuitSlotId;
+  piece: CircuitPiece;
+};
+
+export function listEquippedCircuits(
+  scheme: CircuitScheme,
+  piecesById: Map<string, CircuitPiece>,
+): EquippedCircuit[] {
+  const seen = new Set<string>();
+  const out: EquippedCircuit[] = [];
+  for (const slot of CIRCUIT_SLOT_IDS) {
+    const id = scheme.equipped[slot];
+    if (!id || seen.has(id)) continue;
+    const piece = piecesById.get(id);
+    if (!piece) continue;
+    if (piece.kind !== CIRCUIT_SLOT_KIND[slot]) continue;
+    seen.add(id);
+    out.push({ slot, piece });
+  }
+  return out;
+}
+
+export function unequipCircuit(
+  scheme: CircuitScheme,
+  circuitId: string,
+): CircuitScheme {
+  const equipped: CircuitScheme["equipped"] = { ...scheme.equipped };
+  let changed = false;
+  for (const slot of CIRCUIT_SLOT_IDS) {
+    if (equipped[slot] === circuitId) {
+      equipped[slot] = null;
+      changed = true;
+    }
+  }
+  return changed
+    ? { ...scheme, equipped, updatedAt: new Date().toISOString() }
+    : scheme;
+}
+
+export type CircuitSlotGain = {
+  slot: CircuitSlotId;
+  piece: CircuitPiece;
+  withoutDamage: number;
+  /** Full loadout − without this piece. */
+  delta: number;
+  ratio: number;
+  /** Share of (full − none). Multiplicative, so shares need not sum to 1. */
+  shareOfTotal: number;
+  /** Damage with only this piece equipped. */
+  soloDamage: number;
+  soloDelta: number;
+  soloRatio: number;
+};
+
+export type CircuitSwapGain = {
+  pieceId: string;
+  slot: CircuitSlotId;
+  action: "add" | "swap" | "keep";
+  replacedId: string | null;
+  newDamage: number;
+  delta: number;
+  ratio: number;
+};
+
+export type CircuitComparison = {
+  fullDamage: number;
+  noneDamage: number;
+  totalDelta: number;
+  totalRatio: number;
+  equipped: CircuitSlotGain[];
+  byPieceId: Map<string, CircuitSwapGain>;
+};
+
+/**
+ * Per-circuit damage vs the current scheme: leave-one-out, solo, and
+ * best add/swap placement for every piece in the library.
+ */
+export function compareSchemeCircuits(
+  scheme: CircuitScheme,
+  pieces: CircuitPiece[],
+  piecesById: Map<string, CircuitPiece>,
+  damageOf: (scheme: CircuitScheme | null) => number,
+): CircuitComparison {
+  const fullDamage = damageOf(scheme);
+  const noneDamage = damageOf(null);
+  const totalDelta = fullDamage - noneDamage;
+  const totalRatio = noneDamage > 0 ? fullDamage / noneDamage - 1 : 0;
+  const equippedRefs = listEquippedCircuits(scheme, piecesById);
+  const soloCache = new Map<string, number>();
+
+  const equipped: CircuitSlotGain[] = equippedRefs.map(({ slot, piece }) => {
+    const withoutDamage = damageOf(unequipCircuit(scheme, piece.id));
+    const delta = fullDamage - withoutDamage;
+    let soloDamage = soloCache.get(piece.id);
+    if (soloDamage === undefined) {
+      const soloScheme: CircuitScheme = {
+        ...scheme,
+        equipped: { [slot]: piece.id },
+      };
+      soloDamage = damageOf(soloScheme);
+      soloCache.set(piece.id, soloDamage);
+    }
+    return {
+      slot,
+      piece,
+      withoutDamage,
+      delta,
+      ratio: withoutDamage > 0 ? fullDamage / withoutDamage - 1 : 0,
+      shareOfTotal: totalDelta !== 0 ? delta / totalDelta : 0,
+      soloDamage,
+      soloDelta: soloDamage - noneDamage,
+      soloRatio: noneDamage > 0 ? soloDamage / noneDamage - 1 : 0,
+    };
+  });
+
+  equipped.sort((a, b) => b.delta - a.delta || b.soloDelta - a.soloDelta);
+
+  const byPieceId = new Map<string, CircuitSwapGain>();
+  for (const piece of pieces) {
+    const slots = slotsForKind(piece.kind);
+    if (slots.length === 0) continue;
+    let best: CircuitSwapGain | null = null;
+    for (const slot of slots) {
+      const occupantId = scheme.equipped[slot] ?? null;
+      const next = assignCircuitToSlot(scheme, slot, piece.id);
+      const newDamage = damageOf(next);
+      const action: CircuitSwapGain["action"] =
+        occupantId === piece.id ? "keep" : occupantId ? "swap" : "add";
+      const candidate: CircuitSwapGain = {
+        pieceId: piece.id,
+        slot,
+        action,
+        replacedId: action === "swap" ? occupantId : null,
+        newDamage,
+        delta: newDamage - fullDamage,
+        ratio: fullDamage > 0 ? newDamage / fullDamage - 1 : 0,
+      };
+      if (
+        !best ||
+        candidate.newDamage > best.newDamage ||
+        (candidate.newDamage === best.newDamage && candidate.action === "keep")
+      ) {
+        best = candidate;
+      }
+    }
+    if (best) byPieceId.set(piece.id, best);
+  }
+
+  return {
+    fullDamage,
+    noneDamage,
+    totalDelta,
+    totalRatio,
+    equipped,
+    byPieceId,
+  };
+}
+
 /** Unequip a piece from every slot, then put it on `slot`. */
 export function assignCircuitToSlot(
   scheme: CircuitScheme,
@@ -558,6 +723,7 @@ export function normalizeCircuitPiece(raw: unknown): CircuitPiece | null {
   const breakthroughs = normalizeAffixList(
     src.breakthroughs ?? src.breaks,
     CIRCUIT_BREAK_STATS,
+    { allowDuplicates: true },
   );
   return {
     id,
@@ -574,6 +740,7 @@ export function normalizeCircuitPiece(raw: unknown): CircuitPiece | null {
 function normalizeAffixList(
   raw: unknown,
   allowed: CircuitStatKey[],
+  opts?: { allowDuplicates?: boolean },
 ): CircuitAffix[] {
   if (!Array.isArray(raw)) return [];
   const seen = new Set<CircuitStatKey>();
@@ -582,8 +749,10 @@ function normalizeAffixList(
     const affix = normalizeAffix(item);
     if (!affix) continue;
     if (!allowed.includes(affix.stat)) continue;
-    if (seen.has(affix.stat)) continue;
-    seen.add(affix.stat);
+    if (!opts?.allowDuplicates) {
+      if (seen.has(affix.stat)) continue;
+      seen.add(affix.stat);
+    }
     out.push(affix);
     if (out.length >= 4) break;
   }
@@ -654,35 +823,35 @@ export function contributionLines(
     damage.push(percent ? `${label} +${trimNum(v * 100)}%` : `${label} +${trimNum(v)}`);
   };
 
-  pushBag("attack", "攻擊", false);
-  pushBag("critRate", "暴率", true);
-  pushBag("critDamage", "暴傷", true);
-  pushBag("skillDamage", "技傷", true);
-  pushBag("circuitBoost", "迴路增傷", true);
-  pushBag("allElementDamage", "全屬性傷害", true);
-  pushBag("elementalPower", "屬強", false);
-  pushBag("damageBoost", "提傷", true);
-  pushBag("bossDamage", "頭目", true);
-  pushBag("statusDamage", "異常", true);
-  pushBag("attackPercent", "物攻", true);
-  pushBag("attackPercentMagic", "魔攻", true);
-  pushBag("strPercent", "力量", true);
-  pushBag("intPercent", "智力", true);
+  pushBag("attack", circuitStatLabel("attack"), false);
+  pushBag("physicalAttack", circuitStatLabel("pAtk"), false);
+  pushBag("magicAttack", circuitStatLabel("mAtk"), false);
+  pushBag("critRate", circuitStatLabel("critRate"), true);
+  pushBag("critDamage", circuitStatLabel("critDamage"), true);
+  pushBag("skillDamage", circuitStatLabel("skillDamage"), true);
+  pushBag("circuitBoost", circuitStatLabel("circuitBoost"), true);
+  pushBag("allElementDamage", circuitStatLabel("allElementDamage"), true);
+  pushBag("elementalPower", circuitStatLabel("elementalPower"), false);
+  pushBag("damageBoost", circuitStatLabel("damageBoost"), true);
+  pushBag("bossDamage", circuitStatLabel("bossDamage"), true);
+  pushBag("statusDamage", circuitStatLabel("statusDamage"), true);
+  pushBag("strPercent", circuitStatLabel("str"), true);
+  pushBag("intPercent", circuitStatLabel("int"), true);
 
   const { extra: ex } = contrib;
-  if (ex.hp) extra.push(`生命值 +${trimNum(ex.hp)}`);
-  if (ex.vit) extra.push(`體質 +${trimNum(ex.vit)}`);
-  if (ex.agi) extra.push(`敏捷 +${trimNum(ex.agi)}`);
-  if (ex.spr) extra.push(`精神 +${trimNum(ex.spr)}`);
-  if (ex.agiSpr) extra.push(`敏捷精神 +${trimNum(ex.agiSpr * 100)}%`);
-  if (ex.pDef) extra.push(`物防 +${trimNum(ex.pDef)}`);
-  if (ex.mDef) extra.push(`魔防 +${trimNum(ex.mDef)}`);
-  if (ex.atkSpeed) extra.push(`攻速 +${trimNum(ex.atkSpeed * 100)}%`);
-  if (ex.cooldown) extra.push(`冷卻 +${trimNum(ex.cooldown * 100)}%`);
+  if (ex.hp) extra.push(`${circuitStatLabel("hp")} +${trimNum(ex.hp)}`);
+  if (ex.vit) extra.push(`${circuitStatLabel("vit")} +${trimNum(ex.vit)}`);
+  if (ex.agi) extra.push(`${circuitStatLabel("agi")} +${trimNum(ex.agi)}`);
+  if (ex.spr) extra.push(`${circuitStatLabel("spr")} +${trimNum(ex.spr)}`);
+  if (ex.agiSpr) extra.push(`${circuitStatLabel("agiSpr")} +${trimNum(ex.agiSpr * 100)}%`);
+  if (ex.pDef) extra.push(`${circuitStatLabel("pDef")} +${trimNum(ex.pDef)}`);
+  if (ex.mDef) extra.push(`${circuitStatLabel("mDef")} +${trimNum(ex.mDef)}`);
+  if (ex.atkSpeed) extra.push(`${circuitStatLabel("atkSpeed")} +${trimNum(ex.atkSpeed * 100)}%`);
+  if (ex.cooldown) extra.push(`${circuitStatLabel("cooldown")} +${trimNum(ex.cooldown * 100)}%`);
   for (const [el, v] of Object.entries(ex.unusedElement) as Array<
     [CircuitElement, number]
   >) {
-    if (v) extra.push(`${CIRCUIT_ELEMENT_LABEL[el]}屬 +${trimNum(v)}（未匹配技能屬性）`);
+    if (v) extra.push(m().unusedElement(circuitElementLabel(el), trimNum(v)));
   }
 
   return { damage, extra };
