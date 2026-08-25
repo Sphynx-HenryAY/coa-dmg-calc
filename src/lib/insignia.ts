@@ -4,6 +4,27 @@ import {
   type CircuitExtraStats,
 } from "./circuit";
 import {
+  addToBag,
+  assignToSlot as loadoutAssignToSlot,
+  compareLoadout,
+  countEquipped,
+  detachFromSchemes as loadoutDetach,
+  genericSchemeContribution,
+  listEquipped,
+  unequipPiece,
+  type LoadoutComparison,
+  type LoadoutContribution,
+  type LoadoutEquipped,
+  type LoadoutSlotGain,
+  type LoadoutSwapGain,
+} from "./loadout";
+import {
+  affixLines,
+  slotHint as slotHintImpl,
+  trimNum,
+} from "./format";
+import { parseStatInput, statInputValue } from "./statInput";
+import {
   circuitElementLabel,
   insigniaRarityLabel,
   insigniaStatLabel,
@@ -185,38 +206,22 @@ export function insigniaInputValue(
   stat: InsigniaStatKey,
   stored: number,
 ): number {
-  if (!Number.isFinite(stored)) return 0;
-  if (INSIGNIA_PERCENT_STATS.has(stat)) {
-    return Math.round(stored * 10000) / 100;
-  }
-  return stored;
+  return statInputValue(stat, stored, INSIGNIA_PERCENT_STATS);
 }
 
 export function parseInsigniaInput(
   stat: InsigniaStatKey,
   raw: string,
 ): number {
-  const n = Number(raw);
-  if (!Number.isFinite(n)) return 0;
-  if (INSIGNIA_PERCENT_STATS.has(stat)) return n / 100;
-  return n;
-}
-
-function trimNum(n: number): string {
-  if (Number.isInteger(n)) return String(n);
-  return String(Number(n.toFixed(2)));
+  return parseStatInput(stat, raw, INSIGNIA_PERCENT_STATS);
 }
 
 export function pieceStatLines(piece: InsigniaPiece): string[] {
-  const lines = piece.affixes
-    .filter((a) => a.stat && Number.isFinite(a.value) && a.value !== 0)
-    .map((a) => formatInsigniaAffix(a));
-  return lines;
+  return affixLines([{ prefix: "", affixes: piece.affixes }], formatInsigniaAffix);
 }
 
 export function slotHint(slots: InsigniaSlotId[]): string {
-  if (slots.length === 0) return m().unspecifiedSlots;
-  return slots.map((s) => slotLabel(s)).join(" / ");
+  return slotHintImpl(slots, slotLabel, m().unspecifiedSlots);
 }
 
 export function canSocketIn(
@@ -241,10 +246,7 @@ export type InsigniaExtraStats = CircuitExtraStats & {
   int: number;
 };
 
-export type InsigniaContribution = {
-  bag: StatBag;
-  extra: InsigniaExtraStats;
-};
+export type InsigniaContribution = LoadoutContribution<InsigniaExtraStats>;
 
 function emptyExtra(): InsigniaExtraStats {
   return {
@@ -264,12 +266,6 @@ function emptyExtra(): InsigniaExtraStats {
     str: 0,
     int: 0,
   };
-}
-
-function addToBag(bag: StatBag, key: keyof StatBag, value: number): void {
-  if (!value) return;
-  const prev = (bag[key] as number | undefined) ?? 0;
-  (bag as Record<string, number>)[key] = prev + value;
 }
 
 /**
@@ -415,110 +411,51 @@ export function schemeContribution(
   piecesById: Map<string, InsigniaPiece>,
   element: CircuitElement | "all",
 ): InsigniaContribution {
-  const bag: StatBag = {};
-  let extra = emptyExtra();
-  const seen = new Set<string>();
-
-  for (const slot of INSIGNIA_SLOT_IDS) {
-    const id = scheme.equipped[slot];
-    if (!id || seen.has(id)) continue;
-    const piece = piecesById.get(id);
-    if (!piece) continue;
-    if (!canSocketIn(piece, slot)) continue;
-    seen.add(id);
-    const part = pieceContribution(piece, element);
-    extra = mergeExtra(extra, part.extra);
-    for (const [k, v] of Object.entries(part.bag) as Array<
-      [keyof StatBag, number]
-    >) {
-      addToBag(bag, k, v);
-    }
-  }
-
-  return { bag, extra };
+  return genericSchemeContribution(
+    scheme,
+    piecesById,
+    {
+      slotIds: INSIGNIA_SLOT_IDS,
+      isSocketValid: (piece, slot) => canSocketIn(piece, slot),
+      pieceContribution,
+      emptyExtra,
+      mergeExtra,
+    },
+    element,
+  );
 }
 
 export function equippedCount(scheme: InsigniaScheme): number {
-  let n = 0;
-  for (const slot of INSIGNIA_SLOT_IDS) {
-    if (scheme.equipped[slot]) n += 1;
-  }
-  return n;
+  return countEquipped(scheme, INSIGNIA_SLOT_IDS);
 }
 
-export type EquippedInsignia = {
-  slot: InsigniaSlotId;
-  piece: InsigniaPiece;
-};
+export type EquippedInsignia = LoadoutEquipped<InsigniaPiece, InsigniaSlotId>;
 
 export function listEquippedInsignias(
   scheme: InsigniaScheme,
   piecesById: Map<string, InsigniaPiece>,
 ): EquippedInsignia[] {
-  const seen = new Set<string>();
-  const out: EquippedInsignia[] = [];
-  for (const slot of INSIGNIA_SLOT_IDS) {
-    const id = scheme.equipped[slot];
-    if (!id || seen.has(id)) continue;
-    const piece = piecesById.get(id);
-    if (!piece) continue;
-    if (!canSocketIn(piece, slot)) continue;
-    seen.add(id);
-    out.push({ slot, piece });
-  }
-  return out;
+  return listEquipped(
+    scheme,
+    piecesById,
+    INSIGNIA_SLOT_IDS,
+    (piece, slot) => canSocketIn(piece, slot),
+  );
 }
 
 export function unequipInsignia(
   scheme: InsigniaScheme,
   insigniaId: string,
 ): InsigniaScheme {
-  const equipped: InsigniaScheme["equipped"] = { ...scheme.equipped };
-  let changed = false;
-  for (const slot of INSIGNIA_SLOT_IDS) {
-    if (equipped[slot] === insigniaId) {
-      equipped[slot] = null;
-      changed = true;
-    }
-  }
-  return changed
-    ? { ...scheme, equipped, updatedAt: new Date().toISOString() }
-    : scheme;
+  return unequipPiece(scheme, INSIGNIA_SLOT_IDS, insigniaId);
 }
 
-export type InsigniaSlotGain = {
-  slot: InsigniaSlotId;
-  piece: InsigniaPiece;
-  withoutDamage: number;
-  delta: number;
-  ratio: number;
-  shareOfTotal: number;
-  soloDamage: number;
-  soloDelta: number;
-  soloRatio: number;
-};
+export type InsigniaSlotGain = LoadoutSlotGain<InsigniaPiece, InsigniaSlotId>;
 
-export type InsigniaSwapGain = {
-  pieceId: string;
-  slot: InsigniaSlotId;
-  action: "add" | "swap" | "keep";
-  replacedId: string | null;
-  newDamage: number;
-  delta: number;
-  ratio: number;
-};
+export type InsigniaSwapGain = LoadoutSwapGain<InsigniaSlotId>;
 
-export type InsigniaComparison = {
-  fullDamage: number;
-  noneDamage: number;
-  totalDelta: number;
-  totalRatio: number;
-  equipped: InsigniaSlotGain[];
-  /** Best add / swap / keep for every library piece. */
-  byPieceId: Map<string, InsigniaSwapGain>;
-  /** Every legal placement, keyed by slot, sorted by newDamage desc. */
-  bySlot: Map<InsigniaSlotId, InsigniaSwapGain[]>;
-};
+export type InsigniaComparison =
+  LoadoutComparison<InsigniaPiece, InsigniaSlotId>;
 
 export function compareSchemeInsignias(
   scheme: InsigniaScheme,
@@ -526,92 +463,17 @@ export function compareSchemeInsignias(
   piecesById: Map<string, InsigniaPiece>,
   damageOf: (scheme: InsigniaScheme | null) => number,
 ): InsigniaComparison {
-  const fullDamage = damageOf(scheme);
-  const noneDamage = damageOf(null);
-  const totalDelta = fullDamage - noneDamage;
-  const totalRatio = noneDamage > 0 ? fullDamage / noneDamage - 1 : 0;
-  const equippedRefs = listEquippedInsignias(scheme, piecesById);
-  const soloCache = new Map<string, number>();
-
-  const equipped: InsigniaSlotGain[] = equippedRefs.map(({ slot, piece }) => {
-    const withoutDamage = damageOf(unequipInsignia(scheme, piece.id));
-    const delta = fullDamage - withoutDamage;
-    let soloDamage = soloCache.get(piece.id);
-    if (soloDamage === undefined) {
-      const soloScheme: InsigniaScheme = {
-        ...scheme,
-        equipped: { [slot]: piece.id },
-      };
-      soloDamage = damageOf(soloScheme);
-      soloCache.set(piece.id, soloDamage);
-    }
-    return {
-      slot,
-      piece,
-      withoutDamage,
-      delta,
-      ratio: withoutDamage > 0 ? fullDamage / withoutDamage - 1 : 0,
-      shareOfTotal: totalDelta !== 0 ? delta / totalDelta : 0,
-      soloDamage,
-      soloDelta: soloDamage - noneDamage,
-      soloRatio: noneDamage > 0 ? soloDamage / noneDamage - 1 : 0,
-    };
-  });
-
-  equipped.sort((a, b) => b.delta - a.delta || b.soloDelta - a.soloDelta);
-
-  const byPieceId = new Map<string, InsigniaSwapGain>();
-  const bySlot = new Map<InsigniaSlotId, InsigniaSwapGain[]>();
-  for (const slot of INSIGNIA_SLOT_IDS) bySlot.set(slot, []);
-
-  for (const piece of pieces) {
-    const slots = piece.slots.filter(isInsigniaSlotId);
-    if (slots.length === 0) continue;
-    let best: InsigniaSwapGain | null = null;
-    for (const slot of slots) {
-      const occupantId = scheme.equipped[slot] ?? null;
-      const next = assignInsigniaToSlot(scheme, slot, piece.id);
-      const newDamage = damageOf(next);
-      const action: InsigniaSwapGain["action"] =
-        occupantId === piece.id ? "keep" : occupantId ? "swap" : "add";
-      const candidate: InsigniaSwapGain = {
-        pieceId: piece.id,
-        slot,
-        action,
-        replacedId: action === "swap" ? occupantId : null,
-        newDamage,
-        delta: newDamage - fullDamage,
-        ratio: fullDamage > 0 ? newDamage / fullDamage - 1 : 0,
-      };
-      bySlot.get(slot)!.push(candidate);
-      if (
-        !best ||
-        candidate.newDamage > best.newDamage ||
-        (candidate.newDamage === best.newDamage && candidate.action === "keep")
-      ) {
-        best = candidate;
-      }
-    }
-    if (best) byPieceId.set(piece.id, best);
-  }
-
-  for (const list of bySlot.values()) {
-    list.sort(
-      (a, b) =>
-        b.newDamage - a.newDamage ||
-        Number(a.action === "keep") - Number(b.action === "keep"),
-    );
-  }
-
-  return {
-    fullDamage,
-    noneDamage,
-    totalDelta,
-    totalRatio,
-    equipped,
-    byPieceId,
-    bySlot,
-  };
+  return compareLoadout(
+    scheme,
+    pieces,
+    piecesById,
+    damageOf,
+    {
+      slotIds: INSIGNIA_SLOT_IDS,
+      isSocketValid: (piece, slot) => canSocketIn(piece, slot),
+      slotsForPiece: (piece) => piece.slots.filter(isInsigniaSlotId),
+    },
+  );
 }
 
 export function assignInsigniaToSlot(
@@ -619,41 +481,14 @@ export function assignInsigniaToSlot(
   slot: InsigniaSlotId,
   insigniaId: string | null,
 ): InsigniaScheme {
-  const equipped: InsigniaScheme["equipped"] = { ...scheme.equipped };
-  if (insigniaId) {
-    for (const s of INSIGNIA_SLOT_IDS) {
-      if (equipped[s] === insigniaId) equipped[s] = null;
-    }
-    equipped[slot] = insigniaId;
-  } else {
-    equipped[slot] = null;
-  }
-  return {
-    ...scheme,
-    equipped,
-    updatedAt: new Date().toISOString(),
-  };
+  return loadoutAssignToSlot(scheme, INSIGNIA_SLOT_IDS, slot, insigniaId);
 }
 
 export function detachInsigniasFromSchemes(
   schemes: InsigniaScheme[],
   insigniaIds: string[],
 ): InsigniaScheme[] {
-  const idSet = new Set(insigniaIds);
-  return schemes.map((scheme) => {
-    let changed = false;
-    const equipped: InsigniaScheme["equipped"] = { ...scheme.equipped };
-    for (const slot of INSIGNIA_SLOT_IDS) {
-      const id = equipped[slot];
-      if (id && idSet.has(id)) {
-        equipped[slot] = null;
-        changed = true;
-      }
-    }
-    return changed
-      ? { ...scheme, equipped, updatedAt: new Date().toISOString() }
-      : scheme;
-  });
+  return loadoutDetach(schemes, INSIGNIA_SLOT_IDS, insigniaIds);
 }
 
 export function normalizeInsigniaPiece(raw: unknown): InsigniaPiece | null {

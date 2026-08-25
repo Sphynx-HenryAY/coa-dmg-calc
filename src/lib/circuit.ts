@@ -1,10 +1,32 @@
 import { makeId } from "./damage";
 import {
+  affixLines,
+  slotHint as slotHintImpl,
+  trimNum,
+} from "./format";
+import { parseStatInput, statInputValue } from "./statInput";
+import {
   circuitElementLabel,
   circuitKindLabel,
   circuitStatLabel,
   m,
+  slotLabel,
 } from "./i18n";
+import {
+  addToBag,
+  assignToSlot as loadoutAssignToSlot,
+  compareLoadout,
+  countEquipped,
+  detachFromSchemes as loadoutDetach,
+  genericSchemeContribution,
+  listEquipped,
+  unequipPiece,
+  type LoadoutComparison,
+  type LoadoutContribution,
+  type LoadoutEquipped,
+  type LoadoutSlotGain,
+  type LoadoutSwapGain,
+} from "./loadout";
 import type {
   CircuitAffix,
   CircuitElement,
@@ -218,38 +240,29 @@ export function formatCircuitStatValue(stat: CircuitStatKey, value: number): str
 }
 
 export function circuitInputValue(stat: CircuitStatKey, stored: number): number {
-  if (!Number.isFinite(stored)) return 0;
-  if (CIRCUIT_PERCENT_STATS.has(stat)) {
-    return Math.round(stored * 10000) / 100;
-  }
-  return stored;
+  return statInputValue(stat, stored, CIRCUIT_PERCENT_STATS);
 }
 
 /** Parse a form number: percent stats are entered on a 0–100 scale. */
 export function parseCircuitInput(stat: CircuitStatKey, raw: string): number {
-  const n = Number(raw);
-  if (!Number.isFinite(n)) return 0;
-  if (CIRCUIT_PERCENT_STATS.has(stat)) return n / 100;
-  return n;
-}
-
-function trimNum(n: number): string {
-  if (Number.isInteger(n)) return String(n);
-  return String(Number(n.toFixed(2)));
+  return parseStatInput(stat, raw, CIRCUIT_PERCENT_STATS);
 }
 
 export function pieceStatLines(piece: CircuitPiece): string[] {
   const msg = m();
-  const lines = [`${msg.affixMain}${formatAffix(piece.main)}`];
-  for (const sub of piece.subs) {
-    if (!sub.stat || !Number.isFinite(sub.value) || sub.value === 0) continue;
-    lines.push(`${msg.affixSub}${formatAffix(sub)}`);
-  }
-  for (const br of piece.breakthroughs ?? []) {
-    if (!br.stat || !Number.isFinite(br.value) || br.value === 0) continue;
-    lines.push(`${msg.affixBreak}${formatAffix(br)}`);
-  }
-  return lines;
+  return affixLines(
+    [
+      { prefix: msg.affixMain, affixes: [piece.main], always: true },
+      { prefix: msg.affixSub, affixes: piece.subs },
+      { prefix: msg.affixBreak, affixes: piece.breakthroughs ?? [] },
+    ],
+    formatAffix,
+  );
+}
+
+/** Human-readable list of socket slots for a circuit kind (e.g. "頭 / 手 / 腳"). */
+export function slotHint(kind: CircuitKind): string {
+  return slotHintImpl(slotsForKind(kind), slotLabel);
 }
 
 const ELEMENT_STAT_TO_KEY: Record<CircuitStatKey, CircuitElement | undefined> = {
@@ -296,10 +309,7 @@ export type CircuitExtraStats = {
   unusedElement: Partial<Record<CircuitElement, number>>;
 };
 
-export type CircuitContribution = {
-  bag: StatBag;
-  extra: CircuitExtraStats;
-};
+export type CircuitContribution = LoadoutContribution<CircuitExtraStats>;
 
 function emptyExtra(): CircuitExtraStats {
   return {
@@ -314,12 +324,6 @@ function emptyExtra(): CircuitExtraStats {
     agiSpr: 0,
     unusedElement: {},
   };
-}
-
-function addToBag(bag: StatBag, key: keyof StatBag, value: number): void {
-  if (!value) return;
-  const prev = (bag[key] as number | undefined) ?? 0;
-  (bag as Record<string, number>)[key] = prev + value;
 }
 
 /**
@@ -449,7 +453,10 @@ export function pieceContribution(
   return { bag, extra };
 }
 
-export function mergeExtra(a: CircuitExtraStats, b: CircuitExtraStats): CircuitExtraStats {
+export function mergeExtra(
+  a: CircuitExtraStats,
+  b: CircuitExtraStats,
+): CircuitExtraStats {
   const unusedElement: Partial<Record<CircuitElement, number>> = {
     ...a.unusedElement,
   };
@@ -478,108 +485,53 @@ export function schemeContribution(
   element: CircuitElement | "all",
   _damageType?: DamageType,
 ): CircuitContribution {
-  const bag: StatBag = {};
-  let extra = emptyExtra();
-  const seen = new Set<string>();
-
-  for (const slot of CIRCUIT_SLOT_IDS) {
-    const id = scheme.equipped[slot];
-    if (!id || seen.has(id)) continue;
-    const piece = piecesById.get(id);
-    if (!piece) continue;
-    if (piece.kind !== CIRCUIT_SLOT_KIND[slot]) continue;
-    seen.add(id);
-    const part = pieceContribution(piece, element);
-    extra = mergeExtra(extra, part.extra);
-    for (const [k, v] of Object.entries(part.bag) as Array<[keyof StatBag, number]>) {
-      addToBag(bag, k, v);
-    }
-  }
-
-  return { bag, extra };
+  return genericSchemeContribution(
+    scheme,
+    piecesById,
+    {
+      slotIds: CIRCUIT_SLOT_IDS,
+      isSocketValid: (piece, slot) => piece.kind === CIRCUIT_SLOT_KIND[slot],
+      pieceContribution,
+      emptyExtra,
+      mergeExtra,
+    },
+    element,
+  );
 }
 
 export function equippedCount(scheme: CircuitScheme): number {
-  let n = 0;
-  for (const slot of CIRCUIT_SLOT_IDS) {
-    if (scheme.equipped[slot]) n += 1;
-  }
-  return n;
+  return countEquipped(scheme, CIRCUIT_SLOT_IDS);
 }
 
-export type EquippedCircuit = {
-  slot: CircuitSlotId;
-  piece: CircuitPiece;
-};
+export type EquippedCircuit = LoadoutEquipped<CircuitPiece, CircuitSlotId>;
 
 export function listEquippedCircuits(
   scheme: CircuitScheme,
   piecesById: Map<string, CircuitPiece>,
 ): EquippedCircuit[] {
-  const seen = new Set<string>();
-  const out: EquippedCircuit[] = [];
-  for (const slot of CIRCUIT_SLOT_IDS) {
-    const id = scheme.equipped[slot];
-    if (!id || seen.has(id)) continue;
-    const piece = piecesById.get(id);
-    if (!piece) continue;
-    if (piece.kind !== CIRCUIT_SLOT_KIND[slot]) continue;
-    seen.add(id);
-    out.push({ slot, piece });
-  }
-  return out;
+  return listEquipped(
+    scheme,
+    piecesById,
+    CIRCUIT_SLOT_IDS,
+    (piece, slot) => piece.kind === CIRCUIT_SLOT_KIND[slot],
+  );
 }
 
 export function unequipCircuit(
   scheme: CircuitScheme,
   circuitId: string,
 ): CircuitScheme {
-  const equipped: CircuitScheme["equipped"] = { ...scheme.equipped };
-  let changed = false;
-  for (const slot of CIRCUIT_SLOT_IDS) {
-    if (equipped[slot] === circuitId) {
-      equipped[slot] = null;
-      changed = true;
-    }
-  }
-  return changed
-    ? { ...scheme, equipped, updatedAt: new Date().toISOString() }
-    : scheme;
+  return unequipPiece(scheme, CIRCUIT_SLOT_IDS, circuitId);
 }
 
-export type CircuitSlotGain = {
-  slot: CircuitSlotId;
-  piece: CircuitPiece;
-  withoutDamage: number;
-  /** Full loadout − without this piece. */
-  delta: number;
-  ratio: number;
-  /** Share of (full − none). Multiplicative, so shares need not sum to 1. */
-  shareOfTotal: number;
-  /** Damage with only this piece equipped. */
-  soloDamage: number;
-  soloDelta: number;
-  soloRatio: number;
-};
+export type CircuitSlotGain = LoadoutSlotGain<CircuitPiece, CircuitSlotId>;
 
-export type CircuitSwapGain = {
-  pieceId: string;
-  slot: CircuitSlotId;
-  action: "add" | "swap" | "keep";
-  replacedId: string | null;
-  newDamage: number;
-  delta: number;
-  ratio: number;
-};
+export type CircuitSwapGain = LoadoutSwapGain<CircuitSlotId>;
 
-export type CircuitComparison = {
-  fullDamage: number;
-  noneDamage: number;
-  totalDelta: number;
-  totalRatio: number;
-  equipped: CircuitSlotGain[];
-  byPieceId: Map<string, CircuitSwapGain>;
-};
+export type CircuitComparison = Omit<
+  LoadoutComparison<CircuitPiece, CircuitSlotId>,
+  "bySlot"
+>;
 
 /**
  * Per-circuit damage vs the current scheme: leave-one-out, solo, and
@@ -591,78 +543,24 @@ export function compareSchemeCircuits(
   piecesById: Map<string, CircuitPiece>,
   damageOf: (scheme: CircuitScheme | null) => number,
 ): CircuitComparison {
-  const fullDamage = damageOf(scheme);
-  const noneDamage = damageOf(null);
-  const totalDelta = fullDamage - noneDamage;
-  const totalRatio = noneDamage > 0 ? fullDamage / noneDamage - 1 : 0;
-  const equippedRefs = listEquippedCircuits(scheme, piecesById);
-  const soloCache = new Map<string, number>();
-
-  const equipped: CircuitSlotGain[] = equippedRefs.map(({ slot, piece }) => {
-    const withoutDamage = damageOf(unequipCircuit(scheme, piece.id));
-    const delta = fullDamage - withoutDamage;
-    let soloDamage = soloCache.get(piece.id);
-    if (soloDamage === undefined) {
-      const soloScheme: CircuitScheme = {
-        ...scheme,
-        equipped: { [slot]: piece.id },
-      };
-      soloDamage = damageOf(soloScheme);
-      soloCache.set(piece.id, soloDamage);
-    }
-    return {
-      slot,
-      piece,
-      withoutDamage,
-      delta,
-      ratio: withoutDamage > 0 ? fullDamage / withoutDamage - 1 : 0,
-      shareOfTotal: totalDelta !== 0 ? delta / totalDelta : 0,
-      soloDamage,
-      soloDelta: soloDamage - noneDamage,
-      soloRatio: noneDamage > 0 ? soloDamage / noneDamage - 1 : 0,
-    };
-  });
-
-  equipped.sort((a, b) => b.delta - a.delta || b.soloDelta - a.soloDelta);
-
-  const byPieceId = new Map<string, CircuitSwapGain>();
-  for (const piece of pieces) {
-    const slots = slotsForKind(piece.kind);
-    if (slots.length === 0) continue;
-    let best: CircuitSwapGain | null = null;
-    for (const slot of slots) {
-      const occupantId = scheme.equipped[slot] ?? null;
-      const next = assignCircuitToSlot(scheme, slot, piece.id);
-      const newDamage = damageOf(next);
-      const action: CircuitSwapGain["action"] =
-        occupantId === piece.id ? "keep" : occupantId ? "swap" : "add";
-      const candidate: CircuitSwapGain = {
-        pieceId: piece.id,
-        slot,
-        action,
-        replacedId: action === "swap" ? occupantId : null,
-        newDamage,
-        delta: newDamage - fullDamage,
-        ratio: fullDamage > 0 ? newDamage / fullDamage - 1 : 0,
-      };
-      if (
-        !best ||
-        candidate.newDamage > best.newDamage ||
-        (candidate.newDamage === best.newDamage && candidate.action === "keep")
-      ) {
-        best = candidate;
-      }
-    }
-    if (best) byPieceId.set(piece.id, best);
-  }
-
+  const r = compareLoadout(
+    scheme,
+    pieces,
+    piecesById,
+    damageOf,
+    {
+      slotIds: CIRCUIT_SLOT_IDS,
+      isSocketValid: (piece, slot) => piece.kind === CIRCUIT_SLOT_KIND[slot],
+      slotsForPiece: (piece) => slotsForKind(piece.kind),
+    },
+  );
   return {
-    fullDamage,
-    noneDamage,
-    totalDelta,
-    totalRatio,
-    equipped,
-    byPieceId,
+    fullDamage: r.fullDamage,
+    noneDamage: r.noneDamage,
+    totalDelta: r.totalDelta,
+    totalRatio: r.totalRatio,
+    equipped: r.equipped,
+    byPieceId: r.byPieceId,
   };
 }
 
@@ -672,41 +570,14 @@ export function assignCircuitToSlot(
   slot: CircuitSlotId,
   circuitId: string | null,
 ): CircuitScheme {
-  const equipped: CircuitScheme["equipped"] = { ...scheme.equipped };
-  if (circuitId) {
-    for (const s of CIRCUIT_SLOT_IDS) {
-      if (equipped[s] === circuitId) equipped[s] = null;
-    }
-    equipped[slot] = circuitId;
-  } else {
-    equipped[slot] = null;
-  }
-  return {
-    ...scheme,
-    equipped,
-    updatedAt: new Date().toISOString(),
-  };
+  return loadoutAssignToSlot(scheme, CIRCUIT_SLOT_IDS, slot, circuitId);
 }
 
 export function detachCircuitsFromSchemes(
   schemes: CircuitScheme[],
   circuitIds: string[],
 ): CircuitScheme[] {
-  const idSet = new Set(circuitIds);
-  return schemes.map((scheme) => {
-    let changed = false;
-    const equipped: CircuitScheme["equipped"] = { ...scheme.equipped };
-    for (const slot of CIRCUIT_SLOT_IDS) {
-      const id = equipped[slot];
-      if (id && idSet.has(id)) {
-        equipped[slot] = null;
-        changed = true;
-      }
-    }
-    return changed
-      ? { ...scheme, equipped, updatedAt: new Date().toISOString() }
-      : scheme;
-  });
+  return loadoutDetach(schemes, CIRCUIT_SLOT_IDS, circuitIds);
 }
 
 export function normalizeCircuitPiece(raw: unknown): CircuitPiece | null {
