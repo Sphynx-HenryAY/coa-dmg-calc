@@ -9,38 +9,136 @@ import type {
   ProfessionFamily,
   ProfessionId,
 } from "./types";
+import type enMessagesJson from "./locales/en.json";
 
-export type Locale = "zh" | "en";
+export type Locale = string;
+
+type MessageEntry = string | { tpl: string; args: string[] };
+
+type ToMessage<T> = T extends string
+  ? string
+  : T extends { args: string[] }
+    ? (...args: any[]) => string
+    : never;
+
+export type Messages = {
+  [K in keyof (typeof enMessagesJson)["messages"]]: ToMessage<
+    (typeof enMessagesJson)["messages"][K]
+  >;
+};
+
+export interface Translations {
+  meta: { htmlLang: string; label: string };
+  statLabels: Record<keyof CombatStats, string>;
+  circuitKind: Record<CircuitKind, string>;
+  circuitElement: Record<CircuitElement | "all", string>;
+  circuitStat: Record<CircuitStatKey, string>;
+  insigniaRarity: Record<InsigniaRarity, string>;
+  insigniaStat: Record<InsigniaStatKey, string>;
+  slot: Record<string, string>;
+  catalogStat: Record<string, string>;
+  professionFamily: Record<ProfessionFamily, string>;
+  professionName: Record<BuiltinProfessionId, string>;
+  professionNote: Record<BuiltinProfessionId, string>;
+  messages: Record<string, MessageEntry>;
+}
 
 const STORAGE_KEY = "coa-dmg-calc-locale";
+const USER_LOCALES_KEY = "coa-dmg-calc-user-locales";
 
-function readStoredLocale(): Locale | null {
+// Codes of locales the user imported and stored locally.
+function userLocaleCodes(): string[] {
+  try {
+    const raw = localStorage.getItem(USER_LOCALES_KEY);
+    if (raw) return Object.keys(JSON.parse(raw) as Record<string, unknown>);
+  } catch {
+    /* ignore */
+  }
+  return [];
+}
+
+// Load every locale JSON in ./locales/ automatically.
+// Adding a new language is just dropping a <code>.json file here.
+const localeModules = import.meta.glob("./locales/*.json", {
+  eager: true,
+  import: "default",
+}) as Record<string, Translations>;
+
+function localeFromPath(path: string): string {
+  return path.replace(/^\.\/locales\//, "").replace(/\.json$/, "");
+}
+
+const globResources: Record<string, Translations> = {};
+for (const [path, mod] of Object.entries(localeModules)) {
+  globResources[localeFromPath(path)] = mod;
+}
+
+export const resources: Record<string, Translations> = { ...globResources };
+
+function sortLocales(locales: string[]): string[] {
+  const preferred = ["zh", "en"];
+  return [...locales].sort((a, b) => {
+    const ia = preferred.indexOf(a);
+    const ib = preferred.indexOf(b);
+    const ra = ia === -1 ? 1e9 : ia;
+    const rb = ib === -1 ? 1e9 : ib;
+    if (ra !== rb) return ra - rb;
+    return a.localeCompare(b);
+  });
+}
+
+export const BUILTIN_LOCALES: string[] = sortLocales(Object.keys(globResources));
+
+export const BASE_LOCALE: string = globResources["en"]
+  ? "en"
+  : BUILTIN_LOCALES[0];
+
+export const DEFAULT_LOCALE: string = globResources["zh"]
+  ? "zh"
+  : BASE_LOCALE;
+
+// Traditional Chinese is the preferred fail-over for any missing translation.
+export const FALLBACK_LOCALE: string = globResources["zh"] ? "zh" : BASE_LOCALE;
+
+export let SUPPORTED_LOCALES: string[] = [...BUILTIN_LOCALES];
+
+// Pick the merge base for an imported locale: prefer traditional Chinese for
+// Chinese variants, otherwise fall back to the base locale (en).
+function fallbackBaseFor(code: string): Translations {
+  if (code !== "zh" && globResources["zh"]) return globResources["zh"];
+  return globResources[BASE_LOCALE];
+}
+
+function readStoredLocale(): string | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw === "zh" || raw === "en") return raw;
+    if (raw && (SUPPORTED_LOCALES.includes(raw) || userLocaleCodes().includes(raw)))
+      return raw;
   } catch {
     /* ignore */
   }
   return null;
 }
 
-export function detectLocale(): Locale {
+export function detectLocale(): string {
   const stored = readStoredLocale();
   if (stored) return stored;
   const nav =
     typeof navigator !== "undefined" ? (navigator.language || "").toLowerCase() : "";
-  if (nav.startsWith("en")) return "en";
-  return "zh";
+  for (const loc of SUPPORTED_LOCALES) {
+    if (loc === "zh" ? nav.startsWith("zh") : nav.startsWith(loc)) return loc;
+  }
+  return DEFAULT_LOCALE;
 }
 
-let currentLocale: Locale =
-  typeof window !== "undefined" ? detectLocale() : "zh";
+let currentLocale: string =
+  typeof window !== "undefined" ? detectLocale() : DEFAULT_LOCALE;
 
-export function getLocale(): Locale {
+export function getLocale(): string {
   return currentLocale;
 }
 
-function persistLocale(locale: Locale): void {
+function persistLocale(locale: string): void {
   currentLocale = locale;
   try {
     localStorage.setItem(STORAGE_KEY, locale);
@@ -49,431 +147,412 @@ function persistLocale(locale: Locale): void {
   }
 }
 
-export const STAT_LABELS_I18N: Record<Locale, Record<keyof CombatStats, string>> = {
-  zh: {
-    attack: "攻擊",
-    physicalAttack: "物攻",
-    magicAttack: "魔攻",
-    defenseBreak: "破防",
-    critRate: "暴率",
-    critDamage: "爆傷",
-    elementalPower: "屬強",
-    skillDamage: "技傷",
-    resonance: "共鳴",
-    damageBoost: "提傷",
-    circuitBoost: "迴路增傷",
-    allElementDamage: "全屬性傷害",
-    additionalDamage: "附加傷害",
-    statusDamage: "異常",
-    bossDamage: "頭目",
-    penetration: "穿透",
-    trainingCorrection: "訓練場修正",
-    skillMultiplier: "技能倍率",
-    attackPercent: "攻擊%",
-    normalAttackDamage: "普攻傷害",
-  },
-  en: {
-    attack: "ATK",
-    physicalAttack: "P.ATK",
-    magicAttack: "M.ATK",
-    defenseBreak: "DEF Break",
-    critRate: "Crit Rate",
-    critDamage: "Crit DMG",
-    elementalPower: "Elem. Power",
-    skillDamage: "Skill DMG",
-    resonance: "Resonance",
-    damageBoost: "DMG Boost",
-    circuitBoost: "Circuit Boost",
-    allElementDamage: "All Elem. DMG",
-    additionalDamage: "Bonus DMG",
-    statusDamage: "Status",
-    bossDamage: "Boss",
-    penetration: "Penetration",
-    trainingCorrection: "Training Corr.",
-    skillMultiplier: "Skill Mult.",
-    attackPercent: "ATK%",
-    normalAttackDamage: "Normal ATK DMG",
-  },
-};
+export function applyLocale(locale: string): void {
+  persistLocale(locale);
+}
 
-export const CIRCUIT_KIND_LABELS: Record<Locale, Record<CircuitKind, string>> = {
-  zh: { time: "時間", nether: "冥燈", star: "星軌", key: "輝鑰" },
-  en: { time: "Time", nether: "Nether", star: "Star", key: "Key" },
-};
+function buildMessage(
+  entry: MessageEntry,
+): string | ((...args: any[]) => string) {
+  if (typeof entry === "string") return entry;
+  const { tpl, args } = entry;
+  return (...params: any[]) => {
+    const named: Record<string, any> = {};
+    args.forEach((a, i) => (named[a] = params[i]));
+    return tpl.replace(/\{(\w+)\}/g, (_m, k) =>
+      k in named ? String(named[k]) : `{${k}}`,
+    );
+  };
+}
 
-export const CIRCUIT_ELEMENT_LABELS: Record<
+export let messages: Record<string, Messages> = {};
+
+function rebuildMessages(): void {
+  const built: Record<string, Record<string, string | ((...args: any[]) => string)>> =
+    {};
+  for (const [loc, res] of Object.entries(resources)) {
+    const b: Record<string, string | ((...args: any[]) => string)> = {};
+    for (const [k, v] of Object.entries(res.messages)) {
+      b[k] = buildMessage(v);
+    }
+    built[loc] = b;
+  }
+  messages = built as Record<string, Messages>;
+}
+
+export function getBaseTranslations(): Translations {
+  return globResources[BASE_LOCALE];
+}
+
+export const LOCALE_CATEGORIES: (keyof Translations)[] = [
+  "statLabels",
+  "circuitKind",
+  "circuitElement",
+  "circuitStat",
+  "insigniaRarity",
+  "insigniaStat",
+  "slot",
+  "catalogStat",
+  "professionFamily",
+  "professionName",
+  "professionNote",
+];
+
+export interface UserLocale {
+  meta: { htmlLang: string; label: string };
+  statLabels?: Record<string, string>;
+  circuitKind?: Record<string, string>;
+  circuitElement?: Record<string, string>;
+  circuitStat?: Record<string, string>;
+  insigniaRarity?: Record<string, string>;
+  insigniaStat?: Record<string, string>;
+  slot?: Record<string, string>;
+  catalogStat?: Record<string, string>;
+  professionFamily?: Record<string, string>;
+  professionName?: Record<string, string>;
+  professionNote?: Record<string, string>;
+  messages: Record<string, string>;
+}
+
+function loadUserLocales(): Record<string, UserLocale> {
+  try {
+    const raw = localStorage.getItem(USER_LOCALES_KEY);
+    if (raw) return JSON.parse(raw) as Record<string, UserLocale>;
+  } catch {
+    /* ignore */
+  }
+  return {};
+}
+
+function userLocaleToTranslations(u: UserLocale, baseCode: string = BASE_LOCALE): Translations {
+  const base = globResources[baseCode] ?? fallbackBaseFor(baseCode);
+  const mergeMap = (cat: keyof Translations) =>
+    ({
+      ...(base[cat] as Record<string, string>),
+      ...((u[cat as keyof UserLocale] as Record<string, string>) ?? {}),
+    } as Record<string, string>);
+  const msgs: Record<string, MessageEntry> = {};
+  for (const [k, baseEntry] of Object.entries(base.messages)) {
+    const uv = u.messages?.[k];
+    if (uv != null && uv !== "") {
+      if (typeof baseEntry === "object" && baseEntry && "tpl" in baseEntry) {
+        msgs[k] = { tpl: String(uv), args: (baseEntry as { args: string[] }).args };
+      } else {
+        msgs[k] = String(uv);
+      }
+    } else {
+      msgs[k] = baseEntry;
+    }
+  }
+  return {
+    meta: u.meta ?? base.meta,
+    statLabels: mergeMap("statLabels"),
+    circuitKind: mergeMap("circuitKind"),
+    circuitElement: mergeMap("circuitElement"),
+    circuitStat: mergeMap("circuitStat"),
+    insigniaRarity: mergeMap("insigniaRarity"),
+    insigniaStat: mergeMap("insigniaStat"),
+    slot: mergeMap("slot"),
+    catalogStat: mergeMap("catalogStat"),
+    professionFamily: mergeMap("professionFamily"),
+    professionName: mergeMap("professionName"),
+    professionNote: mergeMap("professionNote"),
+    messages: msgs,
+  };
+}
+
+function rebuildAll(): void {
+  const merged: Record<string, Translations> = { ...globResources };
+  const user = loadUserLocales();
+  for (const [code, u] of Object.entries(user)) {
+    merged[code] = userLocaleToTranslations(u, code);
+  }
+  for (const k of Object.keys(resources)) delete resources[k];
+  Object.assign(resources, merged);
+  SUPPORTED_LOCALES = sortLocales(Object.keys(resources));
+  rebuildMessages();
+  rebuildLabelMaps();
+}
+
+export function getUserLocales(): Record<string, UserLocale> {
+  return loadUserLocales();
+}
+
+export function isBuiltinLocale(code: string): boolean {
+  return code in globResources;
+}
+
+export function saveUserLocale(code: string, data: UserLocale): void {
+  const user = loadUserLocales();
+  user[code] = data;
+  try {
+    localStorage.setItem(USER_LOCALES_KEY, JSON.stringify(user));
+  } catch {
+    /* ignore */
+  }
+  rebuildAll();
+}
+
+export function deleteUserLocale(code: string): void {
+  const user = loadUserLocales();
+  delete user[code];
+  try {
+    localStorage.setItem(USER_LOCALES_KEY, JSON.stringify(user));
+  } catch {
+    /* ignore */
+  }
+  rebuildAll();
+}
+
+export function localeToUserLocale(code: string): UserLocale {
+  const r = resources[code] ?? globResources[BASE_LOCALE];
+  const base = globResources[BASE_LOCALE];
+  const toMsgStr = (k: string): string => {
+    const e = r.messages[k];
+    if (typeof e === "string") return e;
+    if (e && typeof e === "object" && "tpl" in e) return (e as { tpl: string }).tpl;
+    const be = base.messages[k];
+    return typeof be === "string" ? be : (be as { tpl: string })?.tpl ?? "";
+  };
+  const map = (cat: keyof Translations) =>
+    ({ ...(r[cat] as Record<string, string>) } as Record<string, string>);
+  const messagesOut: Record<string, string> = {};
+  for (const k of Object.keys(base.messages)) messagesOut[k] = toMsgStr(k);
+  return {
+    meta: { ...r.meta },
+    statLabels: map("statLabels"),
+    circuitKind: map("circuitKind"),
+    circuitElement: map("circuitElement"),
+    circuitStat: map("circuitStat"),
+    insigniaRarity: map("insigniaRarity"),
+    insigniaStat: map("insigniaStat"),
+    slot: map("slot"),
+    catalogStat: map("catalogStat"),
+    professionFamily: map("professionFamily"),
+    professionName: map("professionName"),
+    professionNote: map("professionNote"),
+    messages: messagesOut,
+  };
+}
+
+export function translationsToUserLocale(t: Translations): UserLocale {
+  const toMsgStr = (k: string): string => {
+    const e = t.messages[k];
+    if (typeof e === "string") return e;
+    if (e && typeof e === "object" && "tpl" in e) return (e as { tpl: string }).tpl;
+    return "";
+  };
+  const map = (cat: keyof Translations) =>
+    ({ ...(t[cat] as Record<string, string>) } as Record<string, string>);
+  const messagesOut: Record<string, string> = {};
+  for (const k of Object.keys(t.messages)) messagesOut[k] = toMsgStr(k);
+  return {
+    meta: { ...t.meta },
+    statLabels: map("statLabels"),
+    circuitKind: map("circuitKind"),
+    circuitElement: map("circuitElement"),
+    circuitStat: map("circuitStat"),
+    insigniaRarity: map("insigniaRarity"),
+    insigniaStat: map("insigniaStat"),
+    slot: map("slot"),
+    catalogStat: map("catalogStat"),
+    professionFamily: map("professionFamily"),
+    professionName: map("professionName"),
+    professionNote: map("professionNote"),
+    messages: messagesOut,
+  };
+}
+
+function buildLabelMap(key: keyof Translations): Record<string, Record<string, string>> {
+  const out: Record<string, Record<string, string>> = {};
+  for (const loc of SUPPORTED_LOCALES) {
+    out[loc] = (resources[loc]?.[key] as Record<string, string>) ?? {};
+  }
+  return out;
+}
+
+export let STAT_LABELS_I18N = buildLabelMap("statLabels") as Record<
+  Locale,
+  Record<keyof CombatStats, string>
+>;
+
+export let CIRCUIT_KIND_LABELS = buildLabelMap("circuitKind") as Record<
+  Locale,
+  Record<CircuitKind, string>
+>;
+
+export let CIRCUIT_ELEMENT_LABELS = buildLabelMap("circuitElement") as Record<
   Locale,
   Record<CircuitElement | "all", string>
-> = {
-  zh: { ice: "冰", fire: "火", electric: "電", dark: "暗", all: "全部" },
-  en: { ice: "Ice", fire: "Fire", electric: "Lightning", dark: "Dark", all: "All" },
-};
+>;
 
-export const CIRCUIT_STAT_LABELS: Record<Locale, Record<CircuitStatKey, string>> = {
-  zh: {
-    str: "力量",
-    int: "智力",
-    vit: "體質",
-    agi: "敏捷",
-    spr: "精神",
-    hp: "生命值",
-    pAtk: "物攻",
-    mAtk: "魔攻",
-    pDef: "物防",
-    mDef: "魔防",
-    critRate: "暴率",
-    critDamage: "暴傷",
-    atkSpeed: "攻速",
-    cooldown: "冷卻",
-    ice: "冰屬",
-    fire: "火屬",
-    electric: "電屬",
-    dark: "暗屬",
-    skillDamage: "技能傷害",
-    attack: "攻擊力",
-    circuitBoost: "迴路增傷",
-    allElementDamage: "全屬性傷害",
-    elementalPower: "全屬性強化",
-    damageBoost: "傷害提升",
-    bossDamage: "頭目傷害",
-    statusDamage: "異常傷害",
-    strInt: "力量智力",
-    agiSpr: "敏捷精神",
-  },
-  en: {
-    str: "STR",
-    int: "INT",
-    vit: "VIT",
-    agi: "AGI",
-    spr: "SPR",
-    hp: "HP",
-    pAtk: "P.ATK",
-    mAtk: "M.ATK",
-    pDef: "P.DEF",
-    mDef: "M.DEF",
-    critRate: "Crit Rate",
-    critDamage: "Crit DMG",
-    atkSpeed: "ATK Speed",
-    cooldown: "CDR",
-    ice: "Ice",
-    fire: "Fire",
-    electric: "Lightning",
-    dark: "Dark",
-    skillDamage: "Skill DMG",
-    attack: "ATK",
-    circuitBoost: "Circuit Boost",
-    allElementDamage: "All Elem. DMG",
-    elementalPower: "Elem. Power",
-    damageBoost: "DMG Boost",
-    bossDamage: "Boss DMG",
-    statusDamage: "Status DMG",
-    strInt: "STR/INT",
-    agiSpr: "AGI/SPR",
-  },
-};
+export let CIRCUIT_STAT_LABELS = buildLabelMap("circuitStat") as Record<
+  Locale,
+  Record<CircuitStatKey, string>
+>;
 
-export const INSIGNIA_RARITY_LABELS: Record<Locale, Record<InsigniaRarity, string>> = {
-  zh: { epic: "史詩", rare: "稀有" },
-  en: { epic: "Epic", rare: "Rare" },
-};
+export let INSIGNIA_RARITY_LABELS = buildLabelMap("insigniaRarity") as Record<
+  Locale,
+  Record<InsigniaRarity, string>
+>;
 
-export const INSIGNIA_STAT_LABELS: Record<Locale, Record<InsigniaStatKey, string>> = {
-  zh: {
-    critRate: "暴率",
-    critDamage: "暴傷",
-    skillDamage: "技能傷害",
-    normalAttack: "普攻傷害",
-    damageBoost: "傷害提升",
-    bossDamage: "頭目傷害",
-    statusDamage: "異常傷害",
-    elementalPower: "全屬性",
-    ice: "冰屬",
-    fire: "火屬",
-    electric: "電屬",
-    dark: "暗屬",
-    attackPercent: "物攻%",
-    attackPercentMagic: "魔攻%",
-    attackPercentBoth: "物攻%+魔攻%",
-    atkSpeed: "攻速",
-    cooldown: "冷卻",
-    hp: "生命值",
-    hpPercent: "生命%",
-    pDef: "物防%",
-    mDef: "魔防%",
-    str: "力量",
-    int: "智力",
-    otherworld: "異界傷害",
-    resonanceCharge: "共鳴充能",
-  },
-  en: {
-    critRate: "Crit Rate",
-    critDamage: "Crit DMG",
-    skillDamage: "Skill DMG",
-    normalAttack: "Normal ATK DMG",
-    damageBoost: "DMG Boost",
-    bossDamage: "Boss DMG",
-    statusDamage: "Status DMG",
-    elementalPower: "Elem. Power",
-    ice: "Ice",
-    fire: "Fire",
-    electric: "Lightning",
-    dark: "Dark",
-    attackPercent: "P.ATK%",
-    attackPercentMagic: "M.ATK%",
-    attackPercentBoth: "P.ATK% + M.ATK%",
-    atkSpeed: "ATK Speed",
-    cooldown: "CDR",
-    hp: "HP",
-    hpPercent: "HP%",
-    pDef: "P.DEF%",
-    mDef: "M.DEF%",
-    str: "STR",
-    int: "INT",
-    otherworld: "Otherworld DMG",
-    resonanceCharge: "Resonance Charge",
-  },
-};
+export let INSIGNIA_STAT_LABELS = buildLabelMap("insigniaStat") as Record<
+  Locale,
+  Record<InsigniaStatKey, string>
+>;
 
-/** Display names for stored slot IDs (IDs stay Chinese). */
-export const SLOT_LABELS: Record<Locale, Record<string, string>> = {
-  zh: {},
-  en: {
-    頭: "Head",
-    身: "Body",
-    手: "Hands",
-    褲: "Pants",
-    鞋: "Shoes",
-    武器: "Weapon",
-    項鍊: "Necklace",
-    頸鍊: "Choker",
-    腕帶: "Wristband",
-    戒指: "Ring",
-    印章: "Seal",
-    護符: "Charm",
-    防具套裝: "Armor Set",
-    飾品套裝: "Accessory Set",
-    套裝效果: "Set Effect",
-    腕帶效果: "Wristband Effect",
-    戒指效果: "Ring Effect",
-    印章效果: "Seal Effect",
-    護符效果: "Charm Effect",
-    上衣: "Chest",
-    褲子: "Legs",
-    腳: "Feet",
-    護腕: "Bracer",
-    其他: "Other",
-    防具: "Armor",
-    飾品: "Accessories",
-  },
-};
+export let SLOT_LABELS = buildLabelMap("slot") as Record<
+  Locale,
+  Record<string, string>
+>;
 
-export const CATALOG_STAT_LABELS: Record<Locale, Record<string, string>> = {
-  zh: {
-    attack: "攻擊力",
-    physicalAttack: "物攻",
-    magicAttack: "魔攻",
-    defenseBreak: "破防",
-    critRate: "暴率",
-    critRateMagic: "魔法暴擊率",
-    critDamage: "爆傷",
-    elementalPower: "屬強",
-    skillDamage: "技傷",
-    resonance: "共鳴",
-    damageBoost: "提傷",
-    circuitBoost: "迴路增傷",
-    allElementDamage: "全屬性傷害",
-    additionalDamage: "附加傷害",
-    statusDamage: "異常",
-    bossDamage: "頭目",
-    penetration: "穿透",
-    penetrationMagic: "魔法穿透",
-    attackPercent: "物理攻擊力",
-    attackPercentMagic: "魔法攻擊力",
-    intPercent: "智力",
-    strPercent: "力量",
-    normalAttackDamage: "普攻傷害",
-    trainingCorrection: "訓練場修正",
-    skillMultiplier: "技能倍率",
-    attackSpeed: "攻速",
-    cooldownSpeed: "冷卻速度",
-    resonanceCharge: "共鳴充能效率",
-  },
-  en: {
-    attack: "ATK",
-    physicalAttack: "P.ATK",
-    magicAttack: "M.ATK",
-    defenseBreak: "DEF Break",
-    critRate: "Crit Rate",
-    critRateMagic: "Magic Crit Rate",
-    critDamage: "Crit DMG",
-    elementalPower: "Elem. Power",
-    skillDamage: "Skill DMG",
-    resonance: "Resonance",
-    damageBoost: "DMG Boost",
-    circuitBoost: "Circuit Boost",
-    allElementDamage: "All Elem. DMG",
-    additionalDamage: "Bonus DMG",
-    statusDamage: "Status",
-    bossDamage: "Boss",
-    penetration: "Penetration",
-    penetrationMagic: "Magic Pen",
-    attackPercent: "P.ATK%",
-    attackPercentMagic: "M.ATK%",
-    intPercent: "INT",
-    strPercent: "STR",
-    normalAttackDamage: "Normal ATK DMG",
-    trainingCorrection: "Training Corr.",
-    skillMultiplier: "Skill Mult.",
-    attackSpeed: "ATK Speed",
-    cooldownSpeed: "CDR",
-    resonanceCharge: "Resonance Charge",
-  },
-};
+export let CATALOG_STAT_LABELS = buildLabelMap("catalogStat") as Record<
+  Locale,
+  Record<string, string>
+>;
+
+export let PROFESSION_FAMILY_LABELS = buildLabelMap("professionFamily") as Record<
+  Locale,
+  Record<ProfessionFamily, string>
+>;
+
+export let PROFESSION_NAME_LABELS = buildLabelMap("professionName") as Record<
+  Locale,
+  Record<BuiltinProfessionId, string>
+>;
+
+export let PROFESSION_NOTE_LABELS = buildLabelMap("professionNote") as Record<
+  Locale,
+  Record<BuiltinProfessionId, string>
+>;
+
+// Rebuild the static label maps so newly added (e.g. imported) locales are
+// included. Without this, lookups for an unknown locale throw and blank the app.
+export function rebuildLabelMaps(): void {
+  STAT_LABELS_I18N = buildLabelMap("statLabels") as Record<
+    Locale,
+    Record<keyof CombatStats, string>
+  >;
+  CIRCUIT_KIND_LABELS = buildLabelMap("circuitKind") as Record<
+    Locale,
+    Record<CircuitKind, string>
+  >;
+  CIRCUIT_ELEMENT_LABELS = buildLabelMap("circuitElement") as Record<
+    Locale,
+    Record<CircuitElement | "all", string>
+  >;
+  CIRCUIT_STAT_LABELS = buildLabelMap("circuitStat") as Record<
+    Locale,
+    Record<CircuitStatKey, string>
+  >;
+  INSIGNIA_RARITY_LABELS = buildLabelMap("insigniaRarity") as Record<
+    Locale,
+    Record<InsigniaRarity, string>
+  >;
+  INSIGNIA_STAT_LABELS = buildLabelMap("insigniaStat") as Record<
+    Locale,
+    Record<InsigniaStatKey, string>
+  >;
+  SLOT_LABELS = buildLabelMap("slot") as Record<Locale, Record<string, string>>;
+  CATALOG_STAT_LABELS = buildLabelMap("catalogStat") as Record<
+    Locale,
+    Record<string, string>
+  >;
+  PROFESSION_FAMILY_LABELS = buildLabelMap("professionFamily") as Record<
+    Locale,
+    Record<ProfessionFamily, string>
+  >;
+  PROFESSION_NAME_LABELS = buildLabelMap("professionName") as Record<
+    Locale,
+    Record<BuiltinProfessionId, string>
+  >;
+  PROFESSION_NOTE_LABELS = buildLabelMap("professionNote") as Record<
+    Locale,
+    Record<BuiltinProfessionId, string>
+  >;
+}
 
 export function slotLabel(slot: string, locale: Locale = getLocale()): string {
-  return SLOT_LABELS[locale][slot] || slot;
+  return SLOT_LABELS[locale]?.[slot] ?? SLOT_LABELS[FALLBACK_LOCALE]?.[slot] ?? slot;
 }
 
 export function statLabel(key: keyof CombatStats, locale: Locale = getLocale()): string {
-  return STAT_LABELS_I18N[locale][key];
+  return (
+    STAT_LABELS_I18N[locale]?.[key] ??
+    STAT_LABELS_I18N[FALLBACK_LOCALE]?.[key] ??
+    String(key)
+  );
 }
 
 export function circuitKindLabel(kind: CircuitKind, locale: Locale = getLocale()): string {
-  return CIRCUIT_KIND_LABELS[locale][kind];
+  return (
+    CIRCUIT_KIND_LABELS[locale]?.[kind] ??
+    CIRCUIT_KIND_LABELS[FALLBACK_LOCALE]?.[kind] ??
+    String(kind)
+  );
 }
 
 export function circuitElementLabel(
   el: CircuitElement | "all",
   locale: Locale = getLocale(),
 ): string {
-  return CIRCUIT_ELEMENT_LABELS[locale][el];
+  return (
+    CIRCUIT_ELEMENT_LABELS[locale]?.[el] ??
+    CIRCUIT_ELEMENT_LABELS[FALLBACK_LOCALE]?.[el] ??
+    String(el)
+  );
 }
 
 export function circuitStatLabel(
   key: CircuitStatKey,
   locale: Locale = getLocale(),
 ): string {
-  return CIRCUIT_STAT_LABELS[locale][key];
+  return (
+    CIRCUIT_STAT_LABELS[locale]?.[key] ??
+    CIRCUIT_STAT_LABELS[FALLBACK_LOCALE]?.[key] ??
+    String(key)
+  );
 }
 
 export function insigniaRarityLabel(
   rarity: InsigniaRarity,
   locale: Locale = getLocale(),
 ): string {
-  return INSIGNIA_RARITY_LABELS[locale][rarity];
+  return (
+    INSIGNIA_RARITY_LABELS[locale]?.[rarity] ??
+    INSIGNIA_RARITY_LABELS[FALLBACK_LOCALE]?.[rarity] ??
+    String(rarity)
+  );
 }
 
 export function insigniaStatLabel(
   key: InsigniaStatKey,
   locale: Locale = getLocale(),
 ): string {
-  return INSIGNIA_STAT_LABELS[locale][key];
+  return (
+    INSIGNIA_STAT_LABELS[locale]?.[key] ??
+    INSIGNIA_STAT_LABELS[FALLBACK_LOCALE]?.[key] ??
+    String(key)
+  );
 }
 
 export function catalogStatLabel(key: string, locale: Locale = getLocale()): string {
-  return CATALOG_STAT_LABELS[locale][key] ?? key;
+  return (
+    CATALOG_STAT_LABELS[locale]?.[key] ??
+    CATALOG_STAT_LABELS[FALLBACK_LOCALE]?.[key] ??
+    key
+  );
 }
-
-export const PROFESSION_FAMILY_LABELS: Record<Locale, Record<ProfessionFamily, string>> = {
-  zh: {
-    sword: "劍士",
-    gunner: "火槍手",
-    mage: "魔導士",
-    puppet: "魔偶師",
-    fighter: "格鬥家",
-    side: "外傳",
-  },
-  en: {
-    sword: "Swordsman",
-    gunner: "Gunner",
-    mage: "Mage",
-    puppet: "Puppeteer",
-    fighter: "Fighter",
-    side: "Side story",
-  },
-};
-
-export const PROFESSION_NAME_LABELS: Record<Locale, Record<BuiltinProfessionId, string>> = {
-  zh: {
-    berserker: "狂戰士",
-    mageblade: "魔劍士",
-    ghostblade: "鬼刃",
-    bounty: "賞金獵人",
-    artillerist: "槍炮師",
-    elementalist: "元素師",
-    warlock: "詭術師",
-    magician: "魔術師",
-    scythe: "鐮衛",
-    puppeteer: "劍侍",
-    cloudheart: "雲心",
-    heartbreaker: "碎心",
-    espionage: "諜影",
-    sonic: "音爆",
-    elsa: "艾爾莎",
-  },
-  en: {
-    berserker: "Berserker",
-    mageblade: "Mageblade",
-    ghostblade: "Ghostblade",
-    bounty: "Bounty Hunter",
-    artillerist: "Artillerist",
-    elementalist: "Elementalist",
-    warlock: "Warlock",
-    magician: "Magician",
-    scythe: "Scythe Guard",
-    puppeteer: "Sword Attendant",
-    cloudheart: "Cloudheart",
-    heartbreaker: "Heartbreaker",
-    espionage: "Espionage",
-    sonic: "Sonic",
-    elsa: "Elsa",
-  },
-};
-
-export const PROFESSION_NOTE_LABELS: Record<Locale, Record<BuiltinProfessionId, string>> = {
-  zh: {
-    berserker: "近戰技能輸出。火屬為預設；循環請依自身技能欄校正。",
-    mageblade: "走魔攻／智力。預設電屬，可依技能改冰火。",
-    ghostblade: "冰火雙屬近戰。寒刃與劍鬼；循環請依自身技能欄校正。",
-    bounty: "遠程射擊。屬性預設全部；循環請依自身技能欄校正。",
-    artillerist: "遠程技能砲擊。火屬為預設。",
-    elementalist: "屬性預設「全部」，迴路冰火電都會進屬強。可改成單一屬性對齊技能。",
-    warlock: "暗屬技能。暗屬迴路／徽記會拉開與其他法系的差距。",
-    magician: "遠程法系，預設電屬。",
-    scythe: "近戰技能，預設暗屬。",
-    puppeteer: "人偶連攜。屬性預設全部。",
-    cloudheart: "格鬥技能輸出。",
-    heartbreaker: "格鬥近戰。屬性預設全部。",
-    espionage: "四武器循環。預設電屬；請用訓練場數字校正一套倍率。",
-    sonic: "外傳職業，預設電屬。",
-    elsa: "外傳法系。無獨立光屬，屬性預設全部。",
-  },
-  en: {
-    berserker: "Melee skill damage. Default Fire. Calibrate the rotation from your skill bar.",
-    mageblade: "Uses M.ATK / INT. Default Lightning; switch to Ice/Fire to match skills.",
-    ghostblade:
-      "Ice/Fire melee. Frost blade and sword ghost; calibrate the rotation from your skill bar.",
-    bounty: "Ranged shots. Default element is All; calibrate the rotation from your skill bar.",
-    artillerist: "Ranged artillery skills. Default Fire.",
-    elementalist:
-      "Default element is All, so Ice/Fire/Lightning circuits all feed Elem. Power. Switch to one element to match a skill.",
-    warlock: "Dark skills. Dark circuits/insignias pull ahead of other mage jobs.",
-    magician: "Ranged mage. Default Lightning.",
-    scythe: "Melee skills. Default Dark.",
-    puppeteer: "Puppet combos. Default element is All.",
-    cloudheart: "Fighter skill damage.",
-    heartbreaker: "Melee fighter. Default element is All.",
-    espionage: "Four-weapon rotation. Default Lightning; calibrate one cycle from the dummy.",
-    sonic: "Side-story job. Default Lightning.",
-    elsa: "Side-story mage. No separate Light element; default is All.",
-  },
-};
 
 export function professionFamilyLabel(
   family: ProfessionFamily,
   locale: Locale = getLocale(),
 ): string {
-  return PROFESSION_FAMILY_LABELS[locale][family];
+  return (
+    PROFESSION_FAMILY_LABELS[locale]?.[family] ??
+    PROFESSION_FAMILY_LABELS[FALLBACK_LOCALE]?.[family] ??
+    String(family)
+  );
 }
 
 export function professionNameLabel(
@@ -482,7 +561,9 @@ export function professionNameLabel(
   fallback?: string,
 ): string {
   if (!id) return fallback ?? "";
-  const labeled = PROFESSION_NAME_LABELS[locale][id as BuiltinProfessionId];
+  const labeled =
+    PROFESSION_NAME_LABELS[locale]?.[id as BuiltinProfessionId] ??
+    PROFESSION_NAME_LABELS[FALLBACK_LOCALE]?.[id as BuiltinProfessionId];
   return labeled ?? fallback ?? id;
 }
 
@@ -492,1058 +573,18 @@ export function professionNoteLabel(
   fallback?: string,
 ): string {
   if (!id) return fallback ?? "";
-  const labeled = PROFESSION_NOTE_LABELS[locale][id as BuiltinProfessionId];
-  return labeled ?? fallback ?? "";
+  const labeled =
+    PROFESSION_NOTE_LABELS[locale]?.[id as BuiltinProfessionId] ??
+    PROFESSION_NOTE_LABELS[FALLBACK_LOCALE]?.[id as BuiltinProfessionId];
+  return labeled ?? fallback ?? id;
 }
 
-function defineMessages<T extends Record<string, unknown>>(messages: T): T {
-  return messages;
-}
-
-export const messages = {
-  zh: defineMessages({
-    appTitle: "COA 傷害計算機",
-    appSubtitle:
-      "依 siumai 傷害 分頁公式計算；從裝備庫、道具、迴路、徽記與職業循環疊加屬性，建立多組 Profile，並用訓練場傷害比較職業強度。",
-    loading: "載入中…",
-    addProfile: "新增配置",
-    exportJson: "匯出",
-    importJson: "匯入",
-    langZh: "中文",
-    langEn: "EN",
-    langAria: "介面語言",
-    tabsAria: "主要分頁",
-    tabProfiles: "配置 Profile",
-    tabProfilesShort: "配置",
-    tabGear: "裝備庫",
-    tabGearShort: "裝備",
-    tabItems: "道具 / Buff",
-    tabItemsShort: "道具",
-    tabCircuits: "迴路配搭",
-    tabCircuitsShort: "迴路",
-    tabInsignias: "徽記配搭",
-    tabInsigniasShort: "徽記",
-    tabCompare: "傷害比較",
-    tabCompareShort: "比較",
-    profileList: "配置列表",
-    shareSelectedFull: (n: number) => `分享選取完整 (${n})`,
-    shareSelectedStats: (n: number) => `分享選取數值 (${n})`,
-    shareSelectedFullTitle: "分享已勾選「比較」的配置（含裝備/道具）",
-    shareSelectedStatsTitle: "分享已勾選「比較」的數值屬性",
-    shareMultiHint: "勾選「比較」可多選配置，再用上方按鈕一次分享全部選取項。",
-    noProfiles: "尚無配置，點右上角新增。",
-    compareSelect: "比較/選取",
-    compareSelectAria: (name: string) => `比較選取 ${name}`,
-    noNote: "無備註",
-    finalDamage: "最終傷害",
-    trainingDamage: "訓練場傷害",
-    trainingNoBoss: (def: number) => `木樁防 ${def}，不含頭目`,
-    cycleOn: (name: string, cycle: string) => `${name} 循環 ×${cycle}`,
-    finalDamageBoss: "公式最終傷害（含頭目）",
-    edit: "編輯",
-    copy: "複製",
-    delete: "刪除",
-    editAria: (name: string) => `編輯 ${name}`,
-    copyAria: (name: string) => `複製 ${name}`,
-    deleteAria: (name: string) => `刪除 ${name}`,
-    editing: (name: string) => `編輯：${name}`,
-    shareFull: "分享完整",
-    shareStats: "分享數值",
-    shareFullTitle: "僅分享目前編輯中的這一份配置（含其裝備/道具）",
-    shareStatsTitle: "僅分享目前編輯中的數值屬性",
-    name: "名稱",
-    note: "備註",
-    damageType: "傷害類型（影響物/魔暴擊、穿透；物理用物攻×力量，魔法用魔攻×智力）",
-    magic: "魔法",
-    physical: "物理",
-    skillElement: "技能屬性（決定迴路冰/火/電/暗是否計入屬強）",
-    elementAll: "全部（所有屬性皆計入）",
-    circuitScheme: "迴路方案",
-    insigniaScheme: "徽記方案",
-    noCircuitScheme: "— 未使用迴路 —",
-    noInsigniaScheme: "— 未使用徽記 —",
-    schemeCount: (name: string, n: number) => `${name}（${n}/11）`,
-    baseStats: "基底數值",
-    baseStatsHint:
-      "輸入欄是未再加選裝備/道具前的基底。選了迴路或徽記方案後，提升會加在對應數值下方；取消方案即減去。不會改寫輸入的基底。「攻擊」為攻擊力，會同時加進物攻與魔攻基礎。比率類以百分比顯示（例如暴率 50 = 50%）。",
-    schemeBonus: (value: string) => `方案 ${value}`,
-    schemeProvided: "方案提供，取消後減去",
-    equipSlots: "裝備欄位",
-    unequipped: "— 未裝備 —",
-    circuitSocket: "迴路鑲嵌",
-    insigniaSocket: "徽記鑲嵌",
-    currentScheme: (name: string, n: number) => `目前方案：${name}（${n}/11）`,
-    schemeNoDamage: "此方案尚無計入傷害的屬性。",
-    noCircuitApplied:
-      "尚未套用迴路方案。在上方選擇方案、貼上分享字串導入，或到「迴路配搭」分頁套用。",
-    noInsigniaApplied:
-      "尚未套用徽記方案。在上方選擇方案、貼上分享字串導入，或到「徽記配搭」分頁套用。",
-    itemsBuffs: "道具 / Buff",
-    calcResult: "計算結果",
-    monsterDef: "怪防",
-    vsMonster: "對怪有效傷害",
-    effectiveStats: "有效屬性",
-    formulaZones: "公式乘區",
-    formulaNote:
-      "最終攻擊 = (攻擊力 + 物攻或魔攻) × (1 + 力量或智力 + 攻擊%)；攻擊力同時加進物攻與魔攻基礎，物攻／魔攻屬性加基礎值而非百分比。最終傷害 = (最終攻擊+破防) × (暴率×(1+爆傷)+(1−暴率)) × (1+屬強/220) × (1+技傷+普攻傷害+共鳴) × (1+提傷) × (1+迴路) × (1+全屬性傷害) × (1+附加) × (1+異常+頭目) × (1+訓練場) × 技能倍率 × 職業循環。訓練場傷害 = 同上但頭目=0，再套木樁防減傷。",
-    pickProfile: "請選擇左側配置進行編輯。",
-    monsterTraining: (def: number) => `訓練場木樁 (${def})`,
-    monsterLow: "低防 (5000)",
-    monsterMid: "中防 (20000)",
-    monsterHigh: "高防 (60000)",
-    editGear: "編輯裝備",
-    addGear: "新增裝備",
-    gearStatHint: "屬性格式（每行一項，也可用 ; 分隔）：",
-    gearNamePh: "例如：自訂 項鍊",
-    slot: "部位",
-    otherSlot: "其他",
-    setName: "套裝",
-    setPh: "自訂 / 套裝名",
-    statsMultiline: "屬性（多行）",
-    gearStatsPh: "技能傷害 +12%\n全屬性強化 +28\n對頭目傷害 +11%",
-    effectsOptional: "特效說明（選填，每行一則）",
-    effectsPh: "特效文字…",
-    saveChanges: "儲存變更",
-    cancelEdit: "取消編輯",
-    batchImport: "批次匯入 / 範本",
-    gearCsvHint: "CSV 欄位：id,name,slot,set,stats,effects。有 id 且已存在則更新，否則新增。stats 用分號分隔多項屬性。",
-    downloadCsvTemplate: "下載 CSV 範本",
-    exportGearCsv: "匯出目前裝備 CSV",
-    importCsv: "批次匯入 CSV",
-    gearLibHint: "示範資料來自 Excel「acc set」+「裝備」。自訂 / 覆寫標 ★。可多選後批次刪除。",
-    searchGear: "搜尋名稱 / 套裝 / 部位",
-    allSlots: "全部部位",
-    selectAllVisible: "全選目前列表",
-    selectedCount: (n: number) => `已選 ${n} 件`,
-    deleteSelected: "刪除選取",
-    confirmDeleteGearN: (n: number) => `確定刪除選取的 ${n} 件裝備？`,
-    confirmDeleteNamed: (name: string) => `刪除「${name}」？`,
-    effectsSummary: "特效說明",
-    editItem: "編輯道具 / Buff",
-    addItem: "新增道具 / Buff",
-    addItemBtn: "新增道具",
-    itemNamePh: "例如：活動 Buff",
-    itemStatsPh: "全屬性傷害 +17%\n附加傷害 +15%",
-    itemCsvHint: "CSV 欄位：id,name,stats。有 id 且已存在則更新，否則新增。",
-    exportItemCsv: "匯出目前道具 CSV",
-    itemLibHint: "示範項目來自 siumai 傷害註記。可編輯、多選刪除、CSV 批次匯入。",
-    searchItems: "搜尋名稱 / 屬性",
-    confirmDeleteItemN: (n: number) => `確定刪除選取的 ${n} 件道具？`,
-    compareTitle: "傷害比較",
-    compareHint:
-      "每個配置可填訓練場實測傷害。比較分頁用實測（未填則用公式）排出傷害比。勾選最多 5 組，第一個為基準。",
-    observedTraining: "訓練場實測",
-    observedTrainingHint:
-      "填此配置在遊戲訓練場看到的數字，傷害會綁在這個配置上。比較分頁用它計算各配置傷害比；留空則用公式訓練場傷害。",
-    observedTrainingPh: "訓練場看到的傷害",
-    damageRatioTitle: "配置傷害比",
-    boundDamage: "配置傷害",
-    boundDamageHint: "有實測用實測，沒有則用公式。",
-    vsBest: "相對最強",
-    observedTag: "實測",
-    formulaTag: "公式",
-    observedVsFormula: "實測 / 公式",
-    noObserved: "未填實測",
-    colBoundDmg: "配置傷害",
-    ratioOfBest: "相對最強",
-    ratioOfBaseline: "相對基準",
-    compareOrder: "比較順序",
-    baseline: "基準",
-    moveUp: "上移",
-    moveDown: "下移",
-    moveLeft: "左移",
-    moveRight: "右移",
-    moveUpAria: (name: string) => `將 ${name} 上移`,
-    moveDownAria: (name: string) => `將 ${name} 下移`,
-    moveLeftAria: (name: string) => `將 ${name} 左移`,
-    moveRightAria: (name: string) => `將 ${name} 右移`,
-    setBaseline: "設為基準",
-    setBaselineTitle: "設為基準（移到第一位）",
-    needTwoProfiles: "請至少勾選 2 個配置。",
-    compareItem: "項目",
-    baselineTag: "基準 · ",
-    dmgVsBaseline: "傷害比較（相對基準）",
-    upliftVsThis: "提升%（基準相對此檔）",
-    quickPick: "快速勾選",
-    damageWord: "傷害",
-    footer: (n: number) =>
-      `公式來源：Excel「siumai 傷害」· 示範裝備：「acc set」${n} 件（含裝備分頁）· 迴路與徽記方案屬性計入公式 · 本機 localStorage 儲存 · 可將配置嵌在 URL 分享`,
-    insigniaMarginalHint: "各徽記邊際貢獻（卸下後傷害掉多少）",
-    customDefault: "自訂",
-    defaultProfileName: (n: number) => `配置 ${n}`,
-    copiedSuffix: " (複製)",
-    noParsedStats: "（無解析到的數值）",
-    promptCopyLink: "複製分享連結：",
-    urlLongWarn: (n: number) => `（連結較長 ${n} 字，部分通訊軟體可能截斷）`,
-    shareNeedSelect: "請先勾選「比較」或選擇要分享的配置",
-    shareNeedProfile: "請先選擇要分享的配置",
-    copiedFullOne: (name: string) => `已複製「${name}」完整分享連結`,
-    copiedFullMany: (n: number) => `已複製 ${n} 組配置的完整分享連結`,
-    copiedStatsOne: (name: string) => `已複製「${name}」數值分享連結`,
-    copiedStatsMany: (n: number) => `已複製 ${n} 組配置的數值分享連結`,
-    shareFullFail: "產生分享連結失敗",
-    shareStatsFail: "產生數值分享連結失敗",
-    badCircuitCode: "無法解析迴路方案字串，請確認是否完整、未截斷",
-    badInsigniaCode: "無法解析徽記方案字串，請確認是否完整、未截斷",
-    importedCircuit: (scheme: string, profile: string) =>
-      `已導入迴路方案「${scheme}」並套用到配置「${profile}」，傷害依此角色目前數值計算`,
-    importedInsignia: (scheme: string, profile: string) =>
-      `已導入徽記方案「${scheme}」並套用到配置「${profile}」，傷害依此角色目前數值計算`,
-    badSchemeCode: "無法辨識方案字串，請貼上 COA-CS1 或 COA-IS1 開頭的內容",
-    noCircuitOnProfile: "此配置尚未套用迴路方案",
-    noInsigniaOnProfile: "此配置尚未套用徽記方案",
-    addedProfile: "已新增配置",
-    copiedProfile: "已複製配置",
-    deletedProfile: "已刪除配置",
-    needGearName: "請輸入裝備名稱",
-    needItemName: "請輸入道具名稱",
-    updatedGear: (name: string) => `已更新裝備：${name}`,
-    addedGear: (name: string) => `已新增裝備：${name}`,
-    updatedItem: (name: string) => `已更新道具：${name}`,
-    addedItem: (name: string) => `已新增道具：${name}`,
-    deletedGearN: (n: number) => `已刪除 ${n} 件裝備`,
-    deletedItemN: (n: number) => `已刪除 ${n} 件道具`,
-    importFailErrors: (errors: string) => `匯入失敗：${errors}`,
-    importFailEmpty: "匯入失敗：CSV 沒有有效列",
-    skippedRows: (n: number) => `（${n} 列略過）`,
-    gearImportDone: (created: number, updated: number, note: string) =>
-      `裝備匯入完成：新增 ${created}、更新 ${updated}${note}`,
-    itemImportDone: (created: number, updated: number, note: string) =>
-      `道具匯入完成：新增 ${created}、更新 ${updated}${note}`,
-    gearCsvFail: "裝備 CSV 匯入失敗",
-    itemCsvFail: "道具 CSV 匯入失敗",
-    exportedJson: "已匯出 JSON",
-    importedJson: "匯入完成",
-    jsonBad: "匯入失敗：JSON 格式錯誤",
-    pickProfileFirst: "請先在「配置」分頁選擇一個配置",
-    shareExistsOne: (name: string) => `分享配置已存在，已開啟：${name}`,
-    shareExistsMany: (n: number) => `分享的 ${n} 組配置均已存在，已開啟現有配置`,
-    shareImportedOne: (name: string) => `已從分享連結匯入配置：${name}`,
-    shareImportedMany: (n: number) => `已從分享連結匯入 ${n} 組配置`,
-    shareImportedPartial: (added: number, skipped: number) =>
-      `已匯入 ${added} 組新配置；${skipped} 組已存在，已略過`,
-    editCircuit: "編輯迴路",
-    addCircuit: "新增迴路",
-    circuitFormHint:
-      "每件迴路 1 條主屬性 + 最多 4 條副屬性 + 最多 4 條突破屬性（30 等後解鎖）。時間只能裝頭/手/腳，冥燈裝上衣/褲子，星軌裝印章/護符，輝鑰裝武器/項鍊/護腕/戒指。突破裡的迴路增傷會進公式 (1+迴路)；全屬性傷害、全屬性強化、提傷、頭目、異常、技傷、暴率、暴傷、攻擊力、力量智力也會計入。攻擊力同時加進物攻與魔攻基礎值；物攻／魔攻副屬加基礎數值（非百分比）；最終攻擊再乘力量（物攻）或智力（魔攻）。冰火電暗（副屬／星軌主屬）以屬強點數走 (1+屬強/220)，且需符合配置的技能屬性。",
-    autoNamePh: "留空則依主屬性自動命名",
-    circuitKind: "迴路種類",
-    kindWithSlots: (kind: string, slots: string) => `${kind}（${slots}）`,
-    mainStat: "主屬性",
-    elemPoints: " · 屬強點數",
-    mainStatValue: "主屬性數值",
-    subStatsTitle: "副屬性（最多 4 條，共通）",
-    subStat: "副屬性",
-    breakStatsTitle: "突破屬性（最多 4 條，可重複）",
-    breakStatsHint:
-      "迴路增傷、全屬性傷害、全屬性強化、技能傷害、傷害提升、頭目傷害、異常傷害、暴傷、暴率、冷卻、攻速、力量智力、敏捷精神、生命、攻擊力。相同屬性可選多次，數值會加總。",
-    breakLabel: "突破",
-    circuitLib: "迴路庫",
-    searchCircuits: "搜尋名稱 / 種類 / 主屬性",
-    allKinds: "全部種類",
-    sortDefault: "預設排序",
-    sortGain: "依傷害增益",
-    noCircuits: "尚無迴路，先在上方新增一條。",
-    canSocket: (slots: string) => `可裝：${slots}`,
-    inUseScheme: " · 目前方案使用中",
-    circuitSchemes: "迴路方案",
-    addScheme: "新增方案",
-    circuitSchemeHint:
-      "11 件裝備各鑲 1 個迴路。多個配置可共用同一方案；改方案會同時影響所有套用它的配置。",
-    exportNeedScheme: "請先新增或選擇要匯出的方案",
-    noSchemes:
-      "尚無方案，點「新增方案」開始配搭，或在上方貼上分享字串導入。",
-    editingScheme: "目前編輯方案",
-    schemeName: "方案名稱",
-    applyToProfile: "套用到目前配置",
-    appliedNow: "目前配置使用中",
-    copyScheme: "複製方案",
-    deleteScheme: "刪除方案",
-    confirmDeleteScheme: (name: string) => `刪除方案「${name}」？`,
-    sockets11: "11 格鑲嵌",
-    unsocketed: "— 未鑲嵌 —",
-    moveHere: "（改裝至此）",
-    subCount: (n: number) => ` · 副 ${n}`,
-    breakCount: (n: number) => ` · 突 ${n}`,
-    canFit: (slots: string) => `可裝 ${slots}`,
-    schemeTotal: "方案加總（計入傷害公式）",
-    noCircuitDamage: "尚未有可計入傷害的迴路屬性。",
-    extraNotInFormula: "以下不在目前傷害公式乘區，僅作紀錄：",
-    previewWithScheme: "目前配置（含此方案）",
-    previewNoCircuit: "不含迴路",
-    previewCircuitGain: "迴路提升",
-    previewNeedProfile: "選擇一個配置後，可即時預覽此方案對最終傷害的影響。",
-    socketToCompare: "鑲嵌迴路後可比較每件對傷害的貢獻。",
-    pickProfileToCompare: "選擇一個配置後，可計算每件迴路的傷害增益並互相比較。",
-    schemeContrib: (dmg: string, ratio: string) => `方案貢獻 ${dmg}（${ratio}）`,
-    addToSlot: (slot: string) => `加到${slot}`,
-    swapToSlot: (slot: string) => `換上${slot}`,
-    keepSlot: (slot: string) => `維持${slot}`,
-    circuitGainTitle: "各迴路傷害貢獻",
-    circuitGainHint:
-      "依目前配置計算。邊際貢獻＝卸下該件後傷害掉多少（與其他迴路疊加後，加總不一定等於整套提升）。單獨貢獻＝只裝這一件相對不含迴路。",
-    gainAlgoAria: "貢獻算法",
-    marginal: "邊際貢獻",
-    solo: "單獨貢獻",
-    shareOfSet: (ratio: string) => `佔整套 ${ratio}`,
-    unused: "— 未使用 —",
-    valueLabel: "數值",
-    updatedCircuit: (name: string) => `已更新迴路：${name}`,
-    addedCircuit: (name: string) => `已新增迴路：${name}`,
-    filledForm: "已填入表單，請核對數值後按新增／儲存",
-    deletedCircuit: (name: string) => `已刪除迴路：${name}`,
-    addedCircuitScheme: "已新增迴路方案",
-    copiedCircuitScheme: "已複製迴路方案",
-    deletedCircuitScheme: "已刪除迴路方案",
-    pickSchemeToExport: "請先選擇要匯出的方案",
-    appliedSchemeTo: (scheme: string, profile: string) =>
-      `已將「${scheme}」套用到 ${profile}`,
-    pickAProfile: "請先選擇一個配置",
-    defaultSchemeName: (n: number) => `方案 ${n}`,
-    newScheme: "新方案",
-    affixMain: "主：",
-    affixSub: "副：",
-    affixBreak: "突：",
-    unusedElement: (el: string, v: string) => `${el}屬 +${v}（未匹配技能屬性）`,
-    unusedElementEn: (el: string, v: string) => `${el} +${v} (does not match skill element)`,
-    editInsignia: "編輯徽記",
-    addInsignia: "新增徽記",
-    insigniaFormHint:
-      "徽記鑲在對應裝備部位上，主要計算史詩（金）與稀有（粉）。每件可指定 1–多個可鑲部位、升階 1–3，以及最多 6 條效果。數值請填該階級的實際值；暴率／暴傷／技傷／普攻／提傷／頭目／異常／物魔攻% 會計入傷害公式，冰火電暗以屬強點數走 (1+屬強/220) 且需符合配置的技能屬性。",
-    autoNameInsigniaPh: "留空則依稀有度與第一條效果自動命名",
-    rarity: "稀有度",
-    rank: "階級",
-    rankN: (n: number) => `${n} 階`,
-    insigniaNotePh: "例如來源副本、未計入的技能等級 +1",
-    socketSlots: "可鑲部位",
-    socketSlotsHint: "同一件徽記通常只能裝在列出的部位之一。方案裡一件徽記同時只佔一格。",
-    effectsMax6: "效果（最多 6 條）",
-    effectsHint: "百分比欄位以 0–100 輸入（例如暴傷 20 = 20%）。全屬性、冰火電暗為點數。",
-    insigniaLib: "徽記庫",
-    searchInsignias: "搜尋名稱 / 部位 / 效果",
-    allRarities: "全部稀有度",
-    noInsignias: "尚無徽記，先在上方新增一條。",
-    insigniaSchemes: "徽記方案",
-    insigniaSchemeHint:
-      "11 件裝備各鑲 1 個徽記。多個配置可共用同一方案；改方案會同時影響所有套用它的配置。",
-    noInsigniaSchemes:
-      "尚無方案，點「新增方案」開始配搭，或在上方貼上分享字串導入。",
-    soloBeforeScheme: "選擇一個配置後，即使尚未組方案，也可先看每件徽記單獨能貢獻多少傷害。",
-    cannotFitSlot: "已不能裝此部位，請改選",
-    noEffect: "無效果",
-    moreEffects: (n: number) => ` · 另 ${n} 條`,
-    nCanFit: (n: number) => `${n} 件可裝`,
-    noneForSlot: "庫中尚無此部位徽記",
-    noInsigniaDamage: "尚未有可計入傷害的徽記屬性。",
-    previewNoInsignia: "不含徽記",
-    previewInsigniaGain: "徽記提升",
-    pickProfileInsigniaCompare: "選擇一個配置後，可計算每件徽記的傷害增益並互相比較。",
-    addInsigniaToCompare: "新增徽記後，可依目前配置計算每件的傷害貢獻。",
-    needOneSlot: "請至少勾選一個可鑲部位",
-    updatedInsignia: (name: string) => `已更新徽記：${name}`,
-    addedInsignia: (name: string) => `已新增徽記：${name}`,
-    copiedInsignia: (name: string) => `已複製徽記：${name}`,
-    deletedInsignia: (name: string) => `已刪除徽記：${name}`,
-    addedInsigniaScheme: "已新增徽記方案",
-    copiedInsigniaScheme: "已複製徽記方案",
-    deletedInsigniaScheme: "已刪除徽記方案",
-    effectN: (n: number) => `效果 ${n}`,
-    rankShort: (n: number) => `${n}階`,
-    insigniaGainTitle: "各徽記傷害貢獻",
-    insigniaGainHintWith:
-      "依目前配置計算（含此方案的其他徽記與迴路／裝備）。邊際貢獻＝卸下該件後傷害掉多少。單獨貢獻＝只裝這一件相對不含徽記。徽記庫則列出每件相對目前方案的最佳加裝／替換。",
-    insigniaGainHintEmpty:
-      "依目前配置計算（尚未有方案，視為空手鑲嵌）。邊際貢獻＝卸下該件後傷害掉多少。單獨貢獻＝只裝這一件相對不含徽記。徽記庫則列出每件相對目前方案的最佳加裝／替換。",
-    equippedSection: "已鑲嵌",
-    notSocketedYet: "尚未鑲嵌。下面先依目前配置排出每件徽記單獨能貢獻多少傷害。",
-    allInsignias: "全部徽記",
-    libraryGainHint: "每件取其可鑲部位裡傷害最高的一格。已鑲嵌且維持原位者增量為 0。",
-    emptySchemeName: "（空方案）",
-    noAffix: "無屬性",
-    unspecifiedSlots: "未指定部位",
-    schemeShare: "方案分享",
-    applyShareScheme: "套用分享方案",
-    exportString: "匯出字串",
-    exporting: "匯出中…",
-    importing: "匯入中…",
-    applying: "套用中…",
-    exportCircuit: "匯出迴路",
-    exportInsignia: "匯出徽記",
-    schemeString: "方案字串",
-    importApply: "導入並套用到配置",
-    importApplyProfile: "導入並套用到此配置",
-    recopyLast: "再複製上次匯出",
-    pickSchemeExport: "請先選擇要匯出的方案",
-    copyCompressed: "複製壓縮字串，可貼給其他人匯入",
-    exportCircuitTitle: "匯出此配置目前套用的迴路方案",
-    exportInsigniaTitle: "匯出此配置目前套用的徽記方案",
-    noCircuitOnThis: "此配置尚未套用迴路方案",
-    noInsigniaOnThis: "此配置尚未套用徽記方案",
-    shareBoxHintCircuit:
-      "匯出目前方案（含已鑲嵌的迴路）為一串壓縮字串。導入後會新增方案並套用到目前角色配置，用該角色自己的裝備與數值計算傷害，不會覆蓋對方的基底屬性。",
-    shareBoxHintInsignia:
-      "匯出目前方案（含已鑲嵌的徽記）為一串壓縮字串。導入後會新增方案並套用到目前角色配置，用該角色自己的裝備與數值計算傷害，不會覆蓋對方的基底屬性。",
-    shareBoxPlaceholderCircuit: "貼上 COA-CS1 開頭的字串，或按「匯出字串」產生",
-    shareBoxPlaceholderInsignia: "貼上 COA-IS1 開頭的字串，或按「匯出字串」產生",
-    profileShareHint:
-      "貼上隊友的迴路或徽記方案字串，會新增方案並套用到這份角色配置。傷害用此角色目前的基底、裝備與道具計算，不會改寫對方或你的角色數值。",
-    profileSharePlaceholder: "貼上 COA-CS1 或 COA-IS1 開頭的字串",
-    copiedKind: (kind: string, n: number) => `已複製${kind}字串（${n} 字）`,
-    generatedKind: (kind: string, n: number) =>
-      `已產生${kind}字串（${n} 字），請手動複製`,
-    exportKindFail: (kind: string) => `匯出${kind}失敗`,
-    circuitCodeWrongTab: "這是迴路方案字串，請到「迴路配搭」分頁匯入",
-    insigniaCodeWrongTab: "這是徽記方案字串，請到「徽記配搭」分頁匯入",
-    importFail: "匯入失敗",
-    exportFail: "匯出失敗",
-    copiedAgain: (n: number) => `已再次複製字串（${n} 字）`,
-    copyManually: "請從上方欄位手動複製",
-    copiedProfileKind: (kind: string, n: number) =>
-      `已複製此配置的${kind}字串（${n} 字）`,
-    generatedProfileKind: (kind: string, n: number) =>
-      `已產生此配置的${kind}字串（${n} 字），請手動複製`,
-    circuitSchemeWord: "迴路方案",
-    insigniaSchemeWord: "徽記方案",
-    scanTitle: "自動辨識數值",
-    scanHint:
-      "貼上或拖入遊戲迴路截圖，或直接貼屬性文字。辨識在瀏覽器內完成，圖不會上傳。第一次截圖辨識會下載中文資料，之後會比較快。請核對後再新增。",
-    pickScreenshot: "選擇截圖",
-    pasteClipboard: "從剪貼簿貼上",
-    clear: "清除",
-    scanAlt: "待辨識截圖",
-    scanTextLabel: "辨識／貼上文字",
-    scanPlaceholder:
-      "例如：\n時間\n暴擊率 +12.5%\n暴擊傷害 +24%\n智力 +8.2%\n物攻 +45\n突破\n迴路增傷 +4.5%",
-    scanning: "辨識中…",
-    noStatsYet: "尚未對到屬性。可改手動輸入，或修正上方文字後會即時重解析。",
-    fillForm: "填入表單",
-    addCircuitDirect: "直接新增迴路",
-    ocrPrepare: "準備圖片…",
-    ocrLoadEngine: "載入辨識引擎",
-    ocrInitEngine: "初始化引擎",
-    ocrDownloadLang: "下載中文辨識資料（首次較久）",
-    ocrInitApi: "準備辨識",
-    ocrRecognize: "辨識文字",
-    ocrProgress: (label: string, pct: number) => `${label} ${pct}%`,
-    ocrHits: (n: number) => `已辨識 ${n} 條屬性，請核對後新增`,
-    ocrNoHits: "截圖已讀取，但沒對到屬性；可改貼文字",
-    ocrFail: (msg: string) => `截圖辨識失敗：${msg}。可改貼屬性文字。`,
-    clipboardBlocked: "這個瀏覽器不允許讀取剪貼簿，請改用 Ctrl+V 或選擇檔案。",
-    clipboardEmpty: "剪貼簿裡沒有圖片或文字。",
-    clipboardDenied: "讀取剪貼簿被拒絕，請改用 Ctrl+V 或選擇檔案。",
-    parseNoHits: "沒有辨識到任何迴路屬性，請檢查文字或截圖。",
-    parseBadMain: (stat: string, kind: string) =>
-      `主屬性「${stat}」不是${kind}的合法主屬，請改種類或主屬。`,
-    parseHigh: (stat: string, raw: string) => `${stat} ${raw} 偏高，請核對辨識結果。`,
-    parseKind: (v: string) => `種類：${v}`,
-    parseName: (v: string) => `名稱：${v}`,
-    tabProfessions: "職業循環",
-    tabProfessionsShort: "職業",
-    profession: "職業",
-    noProfession: "未選職業",
-    noProfessionOption: "— 未指定職業 —",
-    trainingDummy: "訓練場",
-    trainingChip: "訓練場",
-    noProfessionShort: "—",
-    trainingCompare: "訓練場比較（相對基準）",
-    cycleOnMultiplier: (name: string, cycle: string, effective: string) =>
-      `${name} 循環 ×${cycle} → 有效 ${effective}`,
-    newSkill: "新技能",
-    pickProfileAndProfession: "請先選擇配置與職業",
-    needTrainingNumber: "請輸入訓練場看到的傷害數字",
-    calibratedCycle: (dmg: string, name: string, cycle: string) =>
-      `已用訓練場 ${dmg} 校正「${name}」循環倍率為 ${cycle}`,
-    resetProfession: (name: string) => `已還原「${name}」為預設循環`,
-    professionTitle: "職業與循環",
-    professionHint:
-      "職業決定物／魔與預設屬性。循環倍率是一套 rotation 的總％，乘在配置的「技能倍率」上；預設為 1，不改現有數字。技傷與普攻傷害一齊加，不再分佔比。填技能％或用訓練場數字校正後，才能看出各職業真實一套傷害差。",
-    editProfession: "編輯職業",
-    cycleMultiplier: "循環倍率",
-    effective: "有效",
-    fromSkillTable: "（由技能表加總）",
-    cycleSeconds: "循環秒數",
-    calibrateTitle: "用訓練場數字校正",
-    calibrateHint: (def: number) =>
-      `套用此職業到目前配置後，把訓練場（防 ${def}，不含頭目）看到的數字貼上來，反推循環倍率。`,
-    trainingDamagePh: "訓練場傷害",
-    calibrateThis: "校正此職業",
-    resetDefault: "還原預設",
-    collapseSkills: "收合技能表",
-    editSkills: "編輯技能表",
-    applyToNamed: (name: string) => `套用到「${name}」`,
-    skillTableHint:
-      "遊戲內技能％（850 = 850%）。次數 × 段數 × ％ / 100 加總後覆蓋上方循環倍率。全部為 0 則只用循環倍率。技能與普攻都當傷害計算，不必分種類。",
-    colUse: "用",
-    colName: "名稱",
-    colPercent: "％",
-    colHits: "段",
-    colUses: "次",
-    enableSkillAria: (name: string) => `啟用 ${name}`,
-    deleteShort: "刪",
-    addSkillRow: "新增技能列",
-    professionRankTitle: "職業強度比較",
-    pickBuildForProfession: "請先在「配置」分頁選一組配置，作為裝備／迴路／徽記基底。",
-    professionRankHint: (name: string) =>
-      `以「${name}」的基底、裝備、道具、迴路與徽記，只換職業的物／魔、屬性與循環，比較訓練場傷害。`,
-    applyProfessionType: "套用職業物／魔",
-    applyProfessionElement: "套用職業預設屬性",
-    colRank: "排名",
-    colProfession: "職業",
-    colType: "類型",
-    colCycle: "循環",
-    colTrainingDmg: "訓練場傷害",
-    colVsBest: "相對最強",
-    perSecond: "/ 秒",
-    applied: "已套用",
-    apply: "套用",
-    appliedProfession: (name: string, profile: string) =>
-      `已將職業「${name}」套用到「${profile}」`,
-    addProfession: "新增職業",
-    newProfessionName: "新職業",
-    professionNamePh: "例如：鬼刃",
-    customProfession: "自訂",
-    professionFamily: "職業系",
-    professionDamageType: "物／魔",
-    professionElement: "屬性",
-    professionNotePh: "備註（可選）",
-    needProfessionName: "請輸入職業名稱",
-    addedProfession: (name: string) => `已新增職業「${name}」`,
-    deletedProfession: (name: string) => `已刪除職業「${name}」`,
-    deleteProfession: "刪除此職業",
-    confirmDeleteProfession: (name: string) => `刪除自訂職業「${name}」？使用此職業的配置會變成未指定。`,
-    customProfessionHint: "自訂職業會保存在本機，可改名稱、物／魔與屬性，並填循環。",
-  }),
-  en: defineMessages({
-    appTitle: "COA Damage Calculator",
-    appSubtitle:
-      "Uses the siumai damage-sheet formula. Stack gear, items, circuits, insignias, and profession rotations, then compare training-dummy damage across builds.",
-    loading: "Loading…",
-    addProfile: "New build",
-    exportJson: "Export",
-    importJson: "Import",
-    langZh: "中文",
-    langEn: "EN",
-    langAria: "Interface language",
-    tabsAria: "Main tabs",
-    tabProfiles: "Builds",
-    tabProfilesShort: "Builds",
-    tabGear: "Gear",
-    tabGearShort: "Gear",
-    tabItems: "Items / Buffs",
-    tabItemsShort: "Items",
-    tabCircuits: "Circuits",
-    tabCircuitsShort: "Circuits",
-    tabInsignias: "Insignias",
-    tabInsigniasShort: "Insignias",
-    tabCompare: "Compare",
-    tabCompareShort: "Compare",
-    profileList: "Builds",
-    shareSelectedFull: (n: number) => `Share selected full (${n})`,
-    shareSelectedStats: (n: number) => `Share selected stats (${n})`,
-    shareSelectedFullTitle: "Share builds checked for Compare (includes gear/items)",
-    shareSelectedStatsTitle: "Share numeric stats of builds checked for Compare",
-    shareMultiHint:
-      "Check Compare to select multiple builds, then share all of them with the buttons above.",
-    noProfiles: "No builds yet. Use New build in the top right.",
-    compareSelect: "Compare",
-    compareSelectAria: (name: string) => `Compare ${name}`,
-    noNote: "No note",
-    finalDamage: "Final damage",
-    trainingDamage: "Training damage",
-    trainingNoBoss: (def: number) => `Dummy DEF ${def}, no boss`,
-    cycleOn: (name: string, cycle: string) => `${name} cycle ×${cycle}`,
-    finalDamageBoss: "Formula final (includes boss)",
-    edit: "Edit",
-    copy: "Copy",
-    delete: "Delete",
-    editAria: (name: string) => `Edit ${name}`,
-    copyAria: (name: string) => `Copy ${name}`,
-    deleteAria: (name: string) => `Delete ${name}`,
-    editing: (name: string) => `Edit: ${name}`,
-    shareFull: "Share full",
-    shareStats: "Share stats",
-    shareFullTitle: "Share only this build (includes its gear/items)",
-    shareStatsTitle: "Share only this build’s numeric stats",
-    name: "Name",
-    note: "Note",
-    damageType:
-      "Damage type (crit/pen split; physical uses P.ATK × STR, magic uses M.ATK × INT)",
-    magic: "Magic",
-    physical: "Physical",
-    skillElement: "Skill element (which Ice/Fire/Lightning/Dark circuit stats count)",
-    elementAll: "All (every element counts)",
-    circuitScheme: "Circuit scheme",
-    insigniaScheme: "Insignia scheme",
-    noCircuitScheme: "— No circuit —",
-    noInsigniaScheme: "— No insignia —",
-    schemeCount: (name: string, n: number) => `${name} (${n}/11)`,
-    baseStats: "Base stats",
-    baseStatsHint:
-      "These fields are the base before extra gear/items. Circuit and insignia bonuses appear under each stat and are removed if you unequip the scheme. They do not overwrite the typed base. ATK is added to both P.ATK and M.ATK. Percents are shown as 0–100 (crit rate 50 = 50%).",
-    schemeBonus: (value: string) => `Scheme ${value}`,
-    schemeProvided: "From scheme; removed if unequipped",
-    equipSlots: "Gear slots",
-    unequipped: "— Empty —",
-    circuitSocket: "Circuit sockets",
-    insigniaSocket: "Insignia sockets",
-    currentScheme: (name: string, n: number) => `Current scheme: ${name} (${n}/11)`,
-    schemeNoDamage: "This scheme has no damage stats yet.",
-    noCircuitApplied:
-      "No circuit scheme applied. Pick one above, paste a share code, or apply one in the Circuits tab.",
-    noInsigniaApplied:
-      "No insignia scheme applied. Pick one above, paste a share code, or apply one in the Insignias tab.",
-    itemsBuffs: "Items / Buffs",
-    calcResult: "Result",
-    monsterDef: "Monster DEF",
-    vsMonster: "Effective vs monster",
-    effectiveStats: "Effective stats",
-    formulaZones: "Formula zones",
-    formulaNote:
-      "Final ATK = (ATK + P.ATK or M.ATK) × (1 + STR or INT + ATK%). ATK is added to both P.ATK and M.ATK bases; P.ATK/M.ATK affixes are flat, not percent. Final damage = (Final ATK + DEF Break) × (Crit Rate × (1 + Crit DMG) + (1 − Crit Rate)) × (1 + Elem. Power / 220) × (1 + Skill DMG + Normal ATK DMG + Resonance) × (1 + DMG Boost) × (1 + Circuit) × (1 + All Elem. DMG) × (1 + Bonus) × (1 + Status + Boss) × (1 + Training) × Skill Mult. × profession cycle. Training damage = same formula with Boss = 0, then dummy DEF reduction.",
-    pickProfile: "Select a build on the left to edit.",
-    monsterTraining: (def: number) => `Training dummy (${def})`,
-    monsterLow: "Low DEF (5000)",
-    monsterMid: "Mid DEF (20000)",
-    monsterHigh: "High DEF (60000)",
-    editGear: "Edit gear",
-    addGear: "Add gear",
-    gearStatHint: "One stat per line (or separate with ;):",
-    gearNamePh: "e.g. Custom necklace",
-    slot: "Slot",
-    otherSlot: "Other",
-    setName: "Set",
-    setPh: "Custom / set name",
-    statsMultiline: "Stats (multiline)",
-    gearStatsPh: "Skill DMG +12%\nElem. Power +28\nBoss DMG +11%",
-    effectsOptional: "Effect notes (optional, one per line)",
-    effectsPh: "Effect text…",
-    saveChanges: "Save changes",
-    cancelEdit: "Cancel edit",
-    batchImport: "Batch import / template",
-    gearCsvHint:
-      "CSV columns: id,name,slot,set,stats,effects. Existing id updates; otherwise a new row is added. Separate stats with semicolons.",
-    downloadCsvTemplate: "Download CSV template",
-    exportGearCsv: "Export gear CSV",
-    importCsv: "Import CSV",
-    gearLibHint:
-      "Demo data comes from the Excel “acc set” + “gear” sheets. Custom / overrides are marked ★. Multi-select to batch delete.",
-    searchGear: "Search name / set / slot",
-    allSlots: "All slots",
-    selectAllVisible: "Select all visible",
-    selectedCount: (n: number) => `${n} selected`,
-    deleteSelected: "Delete selected",
-    confirmDeleteGearN: (n: number) => `Delete the selected ${n} gear pieces?`,
-    confirmDeleteNamed: (name: string) => `Delete “${name}”?`,
-    effectsSummary: "Effect notes",
-    editItem: "Edit item / buff",
-    addItem: "Add item / buff",
-    addItemBtn: "Add item",
-    itemNamePh: "e.g. Event buff",
-    itemStatsPh: "All Elem. DMG +17%\nBonus DMG +15%",
-    itemCsvHint: "CSV columns: id,name,stats. Existing id updates; otherwise a new row is added.",
-    exportItemCsv: "Export items CSV",
-    itemLibHint:
-      "Demo items come from the siumai damage notes. Edit, multi-select delete, or batch-import CSV.",
-    searchItems: "Search name / stats",
-    confirmDeleteItemN: (n: number) => `Delete the selected ${n} items?`,
-    compareTitle: "Damage compare",
-    compareHint:
-      "Each build can store its training-dummy number. Compare ranks those (formula dummy if empty). Select up to 5; the first is the baseline.",
-    observedTraining: "Dummy (recorded)",
-    observedTrainingHint:
-      "Enter the training-dummy number you saw in-game for this build. Compare uses it for damage ratios; leave empty to use the formula dummy.",
-    observedTrainingPh: "Dummy number from the game",
-    damageRatioTitle: "Build damage ratios",
-    boundDamage: "Build damage",
-    boundDamageHint: "Recorded dummy if set, otherwise the formula dummy.",
-    vsBest: "Vs best",
-    observedTag: "Recorded",
-    formulaTag: "Formula",
-    observedVsFormula: "Recorded / formula",
-    noObserved: "No recorded dummy",
-    colBoundDmg: "Build dmg",
-    ratioOfBest: "Vs best",
-    ratioOfBaseline: "Vs baseline",
-    compareOrder: "Compare order",
-    baseline: "Base",
-    moveUp: "Move up",
-    moveDown: "Move down",
-    moveLeft: "Move left",
-    moveRight: "Move right",
-    moveUpAria: (name: string) => `Move ${name} up`,
-    moveDownAria: (name: string) => `Move ${name} down`,
-    moveLeftAria: (name: string) => `Move ${name} left`,
-    moveRightAria: (name: string) => `Move ${name} right`,
-    setBaseline: "Set as baseline",
-    setBaselineTitle: "Set as baseline (move to first)",
-    needTwoProfiles: "Select at least 2 builds.",
-    compareItem: "Stat",
-    baselineTag: "Base · ",
-    dmgVsBaseline: "Damage vs baseline",
-    upliftVsThis: "Uplift % (baseline vs this)",
-    quickPick: "Quick select",
-    damageWord: "dmg",
-    footer: (n: number) =>
-      `Formula: Excel “siumai damage” · Demo gear: “acc set” ${n} pieces · Circuit and insignia schemes feed the formula · Saved in localStorage · Builds can be shared in the URL`,
-    insigniaMarginalHint: "Marginal contribution of each insignia (damage lost if unequipped)",
-    customDefault: "Custom",
-    defaultProfileName: (n: number) => `Build ${n}`,
-    copiedSuffix: " (copy)",
-    noParsedStats: "(no parsed stats)",
-    promptCopyLink: "Copy share link:",
-    urlLongWarn: (n: number) => ` (link is long: ${n} chars; some apps may truncate it)`,
-    shareNeedSelect: "Check Compare or select a build to share first",
-    shareNeedProfile: "Select a build to share first",
-    copiedFullOne: (name: string) => `Copied full share link for “${name}”`,
-    copiedFullMany: (n: number) => `Copied full share link for ${n} builds`,
-    copiedStatsOne: (name: string) => `Copied stats share link for “${name}”`,
-    copiedStatsMany: (n: number) => `Copied stats share link for ${n} builds`,
-    shareFullFail: "Could not create share link",
-    shareStatsFail: "Could not create stats share link",
-    badCircuitCode: "Could not parse the circuit scheme string. Make sure it is complete.",
-    badInsigniaCode: "Could not parse the insignia scheme string. Make sure it is complete.",
-    importedCircuit: (scheme: string, profile: string) =>
-      `Imported circuit scheme “${scheme}” and applied it to “${profile}”. Damage uses this character’s current stats.`,
-    importedInsignia: (scheme: string, profile: string) =>
-      `Imported insignia scheme “${scheme}” and applied it to “${profile}”. Damage uses this character’s current stats.`,
-    badSchemeCode: "Unrecognized scheme string. Paste something that starts with COA-CS1 or COA-IS1.",
-    noCircuitOnProfile: "This build has no circuit scheme applied",
-    noInsigniaOnProfile: "This build has no insignia scheme applied",
-    addedProfile: "Build added",
-    copiedProfile: "Build copied",
-    deletedProfile: "Build deleted",
-    needGearName: "Enter a gear name",
-    needItemName: "Enter an item name",
-    updatedGear: (name: string) => `Updated gear: ${name}`,
-    addedGear: (name: string) => `Added gear: ${name}`,
-    updatedItem: (name: string) => `Updated item: ${name}`,
-    addedItem: (name: string) => `Added item: ${name}`,
-    deletedGearN: (n: number) => `Deleted ${n} gear pieces`,
-    deletedItemN: (n: number) => `Deleted ${n} items`,
-    importFailErrors: (errors: string) => `Import failed: ${errors}`,
-    importFailEmpty: "Import failed: CSV has no valid rows",
-    skippedRows: (n: number) => ` (${n} rows skipped)`,
-    gearImportDone: (created: number, updated: number, note: string) =>
-      `Gear import done: added ${created}, updated ${updated}${note}`,
-    itemImportDone: (created: number, updated: number, note: string) =>
-      `Item import done: added ${created}, updated ${updated}${note}`,
-    gearCsvFail: "Gear CSV import failed",
-    itemCsvFail: "Item CSV import failed",
-    exportedJson: "JSON exported",
-    importedJson: "Import complete",
-    jsonBad: "Import failed: invalid JSON",
-    pickProfileFirst: "Select a build in the Builds tab first",
-    shareExistsOne: (name: string) => `Shared build already exists, opened: ${name}`,
-    shareExistsMany: (n: number) => `All ${n} shared builds already exist; opened the existing ones`,
-    shareImportedOne: (name: string) => `Imported build from share link: ${name}`,
-    shareImportedMany: (n: number) => `Imported ${n} builds from share link`,
-    shareImportedPartial: (added: number, skipped: number) =>
-      `Imported ${added} new builds; skipped ${skipped} that already exist`,
-    editCircuit: "Edit circuit",
-    addCircuit: "Add circuit",
-    circuitFormHint:
-      "Each circuit has 1 main stat, up to 4 substats, and up to 4 breakthrough stats (unlocked at Lv.30). Time fits Head/Hands/Feet, Nether fits Chest/Legs, Star fits Seal/Charm, Key fits Weapon/Necklace/Bracer/Ring. Breakthrough Circuit Boost feeds (1+Circuit). All Elem. DMG, Elem. Power, DMG Boost, Boss, Status, Skill DMG, Crit Rate/DMG, ATK, and STR/INT also count. ATK is added to both P.ATK and M.ATK; P.ATK/M.ATK subs are flat. Final ATK then multiplies STR (physical) or INT (magic). Ice/Fire/Lightning/Dark go through (1+Elem. Power/220) and must match the build’s skill element.",
-    autoNamePh: "Leave blank to auto-name from the main stat",
-    circuitKind: "Circuit type",
-    kindWithSlots: (kind: string, slots: string) => `${kind} (${slots})`,
-    mainStat: "Main stat",
-    elemPoints: " · elem. points",
-    mainStatValue: "Main stat value",
-    subStatsTitle: "Substats (up to 4, shared pool)",
-    subStat: "Substat",
-    breakStatsTitle: "Breakthrough (up to 4, duplicates allowed)",
-    breakStatsHint:
-      "Circuit Boost, All Elem. DMG, Elem. Power, Skill DMG, DMG Boost, Boss DMG, Status DMG, Crit DMG, Crit Rate, CDR, ATK Speed, STR/INT, AGI/SPR, HP, ATK. The same stat can be picked more than once; values add up.",
-    breakLabel: "Break",
-    circuitLib: "Circuit library",
-    searchCircuits: "Search name / type / main stat",
-    allKinds: "All types",
-    sortDefault: "Default order",
-    sortGain: "By damage gain",
-    noCircuits: "No circuits yet. Add one above.",
-    canSocket: (slots: string) => `Fits: ${slots}`,
-    inUseScheme: " · used in this scheme",
-    circuitSchemes: "Circuit schemes",
-    addScheme: "New scheme",
-    circuitSchemeHint:
-      "One circuit in each of 11 gear slots. Several builds can share a scheme; editing it updates all of them.",
-    exportNeedScheme: "Add or select a scheme to export first",
-    noSchemes: "No schemes yet. Click New scheme, or paste a share string above.",
-    editingScheme: "Editing scheme",
-    schemeName: "Scheme name",
-    applyToProfile: "Apply to current build",
-    appliedNow: "Used by current build",
-    copyScheme: "Copy scheme",
-    deleteScheme: "Delete scheme",
-    confirmDeleteScheme: (name: string) => `Delete scheme “${name}”?`,
-    sockets11: "11 sockets",
-    unsocketed: "— Empty —",
-    moveHere: " (move here)",
-    subCount: (n: number) => ` · sub ${n}`,
-    breakCount: (n: number) => ` · break ${n}`,
-    canFit: (slots: string) => `Fits ${slots}`,
-    schemeTotal: "Scheme total (in the damage formula)",
-    noCircuitDamage: "No circuit stats that feed damage yet.",
-    extraNotInFormula: "Not in the current damage formula; recorded only:",
-    previewWithScheme: "Current build (with this scheme)",
-    previewNoCircuit: "Without circuits",
-    previewCircuitGain: "Circuit gain",
-    previewNeedProfile: "Select a build to preview this scheme’s effect on final damage.",
-    socketToCompare: "Socket circuits to compare each piece’s contribution.",
-    pickProfileToCompare: "Select a build to compare each circuit’s damage gain.",
-    schemeContrib: (dmg: string, ratio: string) => `Scheme contrib ${dmg} (${ratio})`,
-    addToSlot: (slot: string) => `Add to ${slot}`,
-    swapToSlot: (slot: string) => `Swap onto ${slot}`,
-    keepSlot: (slot: string) => `Keep ${slot}`,
-    circuitGainTitle: "Per-circuit damage",
-    circuitGainHint:
-      "Based on the current build. Marginal = damage lost if that piece is removed (sum of pieces may not equal the full set). Solo = only this piece vs no circuits.",
-    gainAlgoAria: "Contribution mode",
-    marginal: "Marginal",
-    solo: "Solo",
-    shareOfSet: (ratio: string) => `${ratio} of set`,
-    unused: "— Unused —",
-    valueLabel: "Value",
-    updatedCircuit: (name: string) => `Updated circuit: ${name}`,
-    addedCircuit: (name: string) => `Added circuit: ${name}`,
-    filledForm: "Filled the form. Check the numbers, then add/save.",
-    deletedCircuit: (name: string) => `Deleted circuit: ${name}`,
-    addedCircuitScheme: "Circuit scheme added",
-    copiedCircuitScheme: "Circuit scheme copied",
-    deletedCircuitScheme: "Circuit scheme deleted",
-    pickSchemeToExport: "Select a scheme to export first",
-    appliedSchemeTo: (scheme: string, profile: string) =>
-      `Applied “${scheme}” to ${profile}`,
-    pickAProfile: "Select a build first",
-    defaultSchemeName: (n: number) => `Scheme ${n}`,
-    newScheme: "New scheme",
-    affixMain: "Main: ",
-    affixSub: "Sub: ",
-    affixBreak: "Break: ",
-    unusedElement: (el: string, v: string) => `${el} +${v} (does not match skill element)`,
-    unusedElementEn: (el: string, v: string) => `${el} +${v} (does not match skill element)`,
-    editInsignia: "Edit insignia",
-    addInsignia: "Add insignia",
-    insigniaFormHint:
-      "Insignias socket into matching gear slots. Epic (gold) and Rare (pink) are the main rarities. Each piece can list one or more slots, rank 1–3, and up to 6 effects. Enter the actual values at that rank. Crit Rate/DMG, Skill DMG, Normal ATK, DMG Boost, Boss, Status, and ATK% feed the formula. Ice/Fire/Lightning/Dark use (1+Elem. Power/220) and must match the build’s skill element.",
-    autoNameInsigniaPh: "Leave blank to auto-name from rarity and the first effect",
-    rarity: "Rarity",
-    rank: "Rank",
-    rankN: (n: number) => `Rank ${n}`,
-    insigniaNotePh: "e.g. dungeon source, uncounted +1 skill level",
-    socketSlots: "Valid slots",
-    socketSlotsHint:
-      "A piece usually fits only the listed slots. In a scheme it occupies one socket at a time.",
-    effectsMax6: "Effects (up to 6)",
-    effectsHint:
-      "Enter percents on a 0–100 scale (Crit DMG 20 = 20%). Elem. Power and elements are points.",
-    insigniaLib: "Insignia library",
-    searchInsignias: "Search name / slot / effect",
-    allRarities: "All rarities",
-    noInsignias: "No insignias yet. Add one above.",
-    insigniaSchemes: "Insignia schemes",
-    insigniaSchemeHint:
-      "One insignia in each of 11 gear slots. Several builds can share a scheme; editing it updates all of them.",
-    noInsigniaSchemes: "No schemes yet. Click New scheme, or paste a share string above.",
-    soloBeforeScheme:
-      "Select a build to see each insignia’s solo damage even before you make a scheme.",
-    cannotFitSlot: "No longer fits this slot; pick another",
-    noEffect: "No effect",
-    moreEffects: (n: number) => ` · +${n} more`,
-    nCanFit: (n: number) => `${n} can fit`,
-    noneForSlot: "No insignia for this slot in the library",
-    noInsigniaDamage: "No insignia stats that feed damage yet.",
-    previewNoInsignia: "Without insignias",
-    previewInsigniaGain: "Insignia gain",
-    pickProfileInsigniaCompare: "Select a build to compare each insignia’s damage gain.",
-    addInsigniaToCompare: "Add insignias to compute each piece’s contribution on this build.",
-    needOneSlot: "Check at least one valid slot",
-    updatedInsignia: (name: string) => `Updated insignia: ${name}`,
-    addedInsignia: (name: string) => `Added insignia: ${name}`,
-    copiedInsignia: (name: string) => `Copied insignia: ${name}`,
-    deletedInsignia: (name: string) => `Deleted insignia: ${name}`,
-    addedInsigniaScheme: "Insignia scheme added",
-    copiedInsigniaScheme: "Insignia scheme copied",
-    deletedInsigniaScheme: "Insignia scheme deleted",
-    effectN: (n: number) => `Effect ${n}`,
-    rankShort: (n: number) => `R${n}`,
-    insigniaGainTitle: "Per-insignia damage",
-    insigniaGainHintWith:
-      "Based on the current build (including other insignias in this scheme, plus circuits/gear). Marginal = damage lost if that piece is removed. Solo = only this piece vs no insignias. The library lists the best add/swap for each piece vs the current scheme.",
-    insigniaGainHintEmpty:
-      "Based on the current build (no scheme yet; treated as empty sockets). Marginal = damage lost if that piece is removed. Solo = only this piece vs no insignias. The library lists the best add/swap for each piece vs the current scheme.",
-    equippedSection: "Socketed",
-    notSocketedYet:
-      "Nothing socketed yet. Below is each insignia’s solo contribution on this build.",
-    allInsignias: "All insignias",
-    libraryGainHint:
-      "Each piece uses the best-fitting slot. Pieces already in place show +0.",
-    emptySchemeName: "(empty scheme)",
-    noAffix: "No stats",
-    unspecifiedSlots: "No slots set",
-    schemeShare: "Share scheme",
-    applyShareScheme: "Apply a shared scheme",
-    exportString: "Export string",
-    exporting: "Exporting…",
-    importing: "Importing…",
-    applying: "Applying…",
-    exportCircuit: "Export circuit",
-    exportInsignia: "Export insignia",
-    schemeString: "Scheme string",
-    importApply: "Import and apply to build",
-    importApplyProfile: "Import and apply to this build",
-    recopyLast: "Copy last export again",
-    pickSchemeExport: "Select a scheme to export first",
-    copyCompressed: "Copy the compressed string to share",
-    exportCircuitTitle: "Export the circuit scheme on this build",
-    exportInsigniaTitle: "Export the insignia scheme on this build",
-    noCircuitOnThis: "This build has no circuit scheme",
-    noInsigniaOnThis: "This build has no insignia scheme",
-    shareBoxHintCircuit:
-      "Export the current scheme (including socketed circuits) as a compressed string. Import adds a new scheme and applies it to the current character. Damage uses that character’s own gear and stats; it does not overwrite their base.",
-    shareBoxHintInsignia:
-      "Export the current scheme (including socketed insignias) as a compressed string. Import adds a new scheme and applies it to the current character. Damage uses that character’s own gear and stats; it does not overwrite their base.",
-    shareBoxPlaceholderCircuit: "Paste a COA-CS1… string, or click Export string",
-    shareBoxPlaceholderInsignia: "Paste a COA-IS1… string, or click Export string",
-    profileShareHint:
-      "Paste a teammate’s circuit or insignia string to add the scheme and apply it to this build. Damage uses this character’s current base, gear, and items. It does not rewrite anyone’s character stats.",
-    profileSharePlaceholder: "Paste a string starting with COA-CS1 or COA-IS1",
-    copiedKind: (kind: string, n: number) => `Copied ${kind} string (${n} chars)`,
-    generatedKind: (kind: string, n: number) =>
-      `Generated ${kind} string (${n} chars). Copy it manually.`,
-    exportKindFail: (kind: string) => `Failed to export ${kind}`,
-    circuitCodeWrongTab: "This is a circuit scheme string. Import it in the Circuits tab.",
-    insigniaCodeWrongTab: "This is an insignia scheme string. Import it in the Insignias tab.",
-    importFail: "Import failed",
-    exportFail: "Export failed",
-    copiedAgain: (n: number) => `Copied the string again (${n} chars)`,
-    copyManually: "Copy it from the field above",
-    copiedProfileKind: (kind: string, n: number) =>
-      `Copied this build’s ${kind} string (${n} chars)`,
-    generatedProfileKind: (kind: string, n: number) =>
-      `Generated this build’s ${kind} string (${n} chars). Copy it manually.`,
-    circuitSchemeWord: "circuit scheme",
-    insigniaSchemeWord: "insignia scheme",
-    scanTitle: "Read stats automatically",
-    scanHint:
-      "Paste or drop a game circuit screenshot, or paste the stat text. OCR stays in the browser; the image is not uploaded. The first screenshot download Chinese language data and is slower. Check the result before adding.",
-    pickScreenshot: "Choose screenshot",
-    pasteClipboard: "Paste from clipboard",
-    clear: "Clear",
-    scanAlt: "Screenshot to recognize",
-    scanTextLabel: "Recognized / pasted text",
-    scanPlaceholder:
-      "e.g.\nTime\nCrit Rate +12.5%\nCrit DMG +24%\nINT +8.2%\nP.ATK +45\nBreakthrough\nCircuit Boost +4.5%",
-    scanning: "Recognizing…",
-    noStatsYet: "No stats matched. Type them manually, or edit the text above to re-parse.",
-    fillForm: "Fill form",
-    addCircuitDirect: "Add circuit now",
-    ocrPrepare: "Preparing image…",
-    ocrLoadEngine: "Loading OCR engine",
-    ocrInitEngine: "Initializing engine",
-    ocrDownloadLang: "Downloading Chinese OCR data (first time is slower)",
-    ocrInitApi: "Preparing OCR",
-    ocrRecognize: "Reading text",
-    ocrProgress: (label: string, pct: number) => `${label} ${pct}%`,
-    ocrHits: (n: number) => `Read ${n} stats. Check them, then add.`,
-    ocrNoHits: "Screenshot loaded, but no stats matched. You can paste text instead.",
-    ocrFail: (msg: string) => `Screenshot OCR failed: ${msg}. You can paste the stat text instead.`,
-    clipboardBlocked: "This browser cannot read the clipboard. Use Ctrl+V or choose a file.",
-    clipboardEmpty: "Clipboard has no image or text.",
-    clipboardDenied: "Clipboard access was denied. Use Ctrl+V or choose a file.",
-    parseNoHits: "No circuit stats found. Check the text or screenshot.",
-    parseBadMain: (stat: string, kind: string) =>
-      `Main stat “${stat}” is not valid for ${kind}. Change the type or main stat.`,
-    parseHigh: (stat: string, raw: string) => `${stat} ${raw} looks high. Double-check the OCR.`,
-    parseKind: (v: string) => `Type: ${v}`,
-    parseName: (v: string) => `Name: ${v}`,
-    tabProfessions: "Professions",
-    tabProfessionsShort: "Jobs",
-    profession: "Profession",
-    noProfession: "No profession",
-    noProfessionOption: "— No profession —",
-    trainingDummy: "Training",
-    trainingChip: "train.",
-    noProfessionShort: "—",
-    trainingCompare: "Training vs baseline",
-    cycleOnMultiplier: (name: string, cycle: string, effective: string) =>
-      `${name} cycle ×${cycle} → effective ${effective}`,
-    newSkill: "New skill",
-    pickProfileAndProfession: "Select a build and a profession first",
-    needTrainingNumber: "Enter the training-dummy damage you saw",
-    calibratedCycle: (dmg: string, name: string, cycle: string) =>
-      `Used training ${dmg} to set “${name}” cycle multiplier to ${cycle}`,
-    resetProfession: (name: string) => `Reset “${name}” to the default cycle`,
-    professionTitle: "Profession and rotation",
-    professionHint:
-      "Profession sets physical/magic and default element. Cycle multiplier is one rotation’s total %, stacked on the build’s skill multiplier (default 1, so existing numbers stay the same). Skill DMG and Normal ATK DMG both add; there is no skill/AA split. Fill skill % or calibrate from the training dummy to compare real rotation damage.",
-    editProfession: "Edit profession",
-    cycleMultiplier: "Cycle multiplier",
-    effective: "Effective",
-    fromSkillTable: " (from skill table)",
-    cycleSeconds: "Cycle seconds",
-    calibrateTitle: "Calibrate from training dummy",
-    calibrateHint: (def: number) =>
-      `Apply this profession to the current build, then paste the training-dummy number (DEF ${def}, no boss). That reverse-engineers the cycle multiplier.`,
-    trainingDamagePh: "Training damage",
-    calibrateThis: "Calibrate this profession",
-    resetDefault: "Reset default",
-    collapseSkills: "Hide skill table",
-    editSkills: "Edit skill table",
-    applyToNamed: (name: string) => `Apply to “${name}”`,
-    skillTableHint:
-      "In-game skill % (850 = 850%). Uses × hits × % / 100 replaces the cycle multiplier above. If every row is 0, only the cycle multiplier is used. Skills and normal attacks both count as damage — no kind column.",
-    colUse: "On",
-    colName: "Name",
-    colPercent: "%",
-    colHits: "Hits",
-    colUses: "Uses",
-    enableSkillAria: (name: string) => `Enable ${name}`,
-    deleteShort: "Del",
-    addSkillRow: "Add skill row",
-    professionRankTitle: "Profession ranking",
-    pickBuildForProfession:
-      "Select a build in the Builds tab first. That gear / circuit / insignia set is the baseline.",
-    professionRankHint: (name: string) =>
-      `Using “${name}” base, gear, items, circuits, and insignias, only the profession’s type, element, and cycle change. Compare training-dummy damage.`,
-    applyProfessionType: "Use profession physical/magic",
-    applyProfessionElement: "Use profession default element",
-    colRank: "Rank",
-    colProfession: "Profession",
-    colType: "Type",
-    colCycle: "Cycle",
-    colTrainingDmg: "Training dmg",
-    colVsBest: "Vs best",
-    perSecond: "/ sec",
-    applied: "Applied",
-    apply: "Apply",
-    appliedProfession: (name: string, profile: string) =>
-      `Applied profession “${name}” to “${profile}”`,
-    addProfession: "Add profession",
-    newProfessionName: "New job",
-    professionNamePh: "e.g. Ghostblade",
-    customProfession: "Custom",
-    professionFamily: "Class line",
-    professionDamageType: "P/M",
-    professionElement: "Element",
-    professionNotePh: "Note (optional)",
-    needProfessionName: "Enter a profession name",
-    addedProfession: (name: string) => `Added profession “${name}”`,
-    deletedProfession: (name: string) => `Deleted profession “${name}”`,
-    deleteProfession: "Delete this profession",
-    confirmDeleteProfession: (name: string) =>
-      `Delete custom profession “${name}”? Builds using it will have no profession.`,
-    customProfessionHint:
-      "Custom professions are saved locally. You can change name, physical/magic, element, and rotation.",
-  }),
-} as const;
-
-export type Messages = (typeof messages)["zh"];
-
-export function applyLocale(locale: Locale): void {
-  persistLocale(locale);
-}
+rebuildAll();
 
 export function m(): Messages {
-  return messages[getLocale()];
+  return (
+    messages[getLocale()] ??
+    messages[FALLBACK_LOCALE] ??
+    messages[DEFAULT_LOCALE]
+  );
 }

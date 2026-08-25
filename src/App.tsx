@@ -70,6 +70,7 @@ import {
 import { CircuitTab } from "./components/CircuitTab";
 import { InsigniaTab } from "./components/InsigniaTab";
 import { ProfessionTab } from "./components/ProfessionTab";
+import { LanguageTab } from "./components/LanguageTab";
 import { ProfileSchemeShareBox } from "./components/SchemeShareBox";
 import {
   contributionLines,
@@ -111,6 +112,8 @@ import {
   professionNameLabel,
   slotLabel,
   statLabel,
+  resources,
+  SUPPORTED_LOCALES,
 } from "./lib/i18n";
 import { useI18n } from "./lib/I18nProvider";
 
@@ -169,7 +172,8 @@ type Tab =
   | "circuits"
   | "insignias"
   | "professions"
-  | "compare";
+  | "compare"
+  | "languages";
 
 function App() {
   const { locale, setLocale, m } = useI18n();
@@ -1461,20 +1465,16 @@ function App() {
           <div className="hero-title-row">
             <h1>{m.appTitle}</h1>
             <div className="lang-switch" role="group" aria-label={m.langAria}>
-              <button
-                type="button"
-                className={locale === "zh" ? "active" : ""}
-                onClick={() => setLocale("zh")}
-              >
-                {m.langZh}
-              </button>
-              <button
-                type="button"
-                className={locale === "en" ? "active" : ""}
-                onClick={() => setLocale("en")}
-              >
-                {m.langEn}
-              </button>
+              {SUPPORTED_LOCALES.map((loc) => (
+                <button
+                  key={loc}
+                  type="button"
+                  className={locale === loc ? "active" : ""}
+                  onClick={() => setLocale(loc)}
+                >
+                  {resources[loc].meta.label}
+                </button>
+              ))}
             </div>
           </div>
           <p>{m.appSubtitle}</p>
@@ -1511,6 +1511,7 @@ function App() {
             ["insignias", m.tabInsignias, m.tabInsigniasShort],
             ["professions", m.tabProfessions, m.tabProfessionsShort],
             ["compare", m.tabCompare, m.tabCompareShort],
+            ["languages", m.tabLanguages, m.tabLanguagesShort],
           ] as const
         ).map(([id, label, shortLabel]) => (
           <button
@@ -2579,6 +2580,8 @@ function App() {
           onStatus={setStatus}
         />
       )}
+
+      {tab === "languages" && <LanguageTab onStatus={setStatus} />}
 
       {tab === "compare" && (
         <section className="panel wide">

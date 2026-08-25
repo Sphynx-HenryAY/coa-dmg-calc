@@ -10,7 +10,8 @@ import {
 import {
   applyLocale,
   detectLocale,
-  messages,
+  m,
+  resources,
   type Locale,
   type Messages,
 } from "./i18n";
@@ -33,12 +34,12 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     applyLocale(locale);
-    document.documentElement.lang = locale === "en" ? "en" : "zh-Hant";
-    document.title = messages[locale].appTitle;
+    document.documentElement.lang = resources[locale]?.meta.htmlLang ?? "zh-Hant";
+    document.title = m().appTitle;
   }, [locale]);
 
   const value = useMemo<I18nContextValue>(
-    () => ({ locale, setLocale, m: messages[locale] }),
+    () => ({ locale, setLocale, m: m() }),
     [locale, setLocale],
   );
 
