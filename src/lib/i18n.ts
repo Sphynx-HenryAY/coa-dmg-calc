@@ -184,7 +184,9 @@ export function getBaseTranslations(): Translations {
   return globResources[BASE_LOCALE];
 }
 
-export const LOCALE_CATEGORIES: (keyof Translations)[] = [
+// Single declarative config listing the translatable label categories. Every
+// per-category label map is now derived from this one list.
+export const LABEL_CATEGORIES = [
   "statLabels",
   "circuitKind",
   "circuitElement",
@@ -196,7 +198,12 @@ export const LOCALE_CATEGORIES: (keyof Translations)[] = [
   "professionFamily",
   "professionName",
   "professionNote",
-];
+] as const;
+
+export type LabelCategory = (typeof LABEL_CATEGORIES)[number];
+
+// Backwards-compatible list consumed by the language editor UI (LanguageTab).
+export const LOCALE_CATEGORIES: (keyof Translations)[] = [...LABEL_CATEGORIES];
 
 export interface UserLocale {
   meta: { htmlLang: string; label: string };
@@ -363,196 +370,93 @@ export function translationsToUserLocale(t: Translations): UserLocale {
   };
 }
 
-function buildLabelMap(key: keyof Translations): Record<string, Record<string, string>> {
-  const out: Record<string, Record<string, string>> = {};
+// Single label store: labels[locale][category][key]. Built once via buildLabels
+// and rebuilt by rebuildLabelMaps() when locales change (e.g. import/delete).
+type LabelStore = Record<string, Record<LabelCategory, Record<string, string>>>;
+
+function buildLabels(): LabelStore {
+  const out: LabelStore = {};
   for (const loc of SUPPORTED_LOCALES) {
-    out[loc] = (resources[loc]?.[key] as Record<string, string>) ?? {};
+    const perLocale = {} as Record<LabelCategory, Record<string, string>>;
+    for (const cat of LABEL_CATEGORIES) {
+      perLocale[cat] = (resources[loc]?.[cat] as Record<string, string>) ?? {};
+    }
+    out[loc] = perLocale;
   }
   return out;
 }
 
-export let STAT_LABELS_I18N = buildLabelMap("statLabels") as Record<
-  Locale,
-  Record<keyof CombatStats, string>
->;
-
-export let CIRCUIT_KIND_LABELS = buildLabelMap("circuitKind") as Record<
-  Locale,
-  Record<CircuitKind, string>
->;
-
-export let CIRCUIT_ELEMENT_LABELS = buildLabelMap("circuitElement") as Record<
-  Locale,
-  Record<CircuitElement | "all", string>
->;
-
-export let CIRCUIT_STAT_LABELS = buildLabelMap("circuitStat") as Record<
-  Locale,
-  Record<CircuitStatKey, string>
->;
-
-export let INSIGNIA_RARITY_LABELS = buildLabelMap("insigniaRarity") as Record<
-  Locale,
-  Record<InsigniaRarity, string>
->;
-
-export let INSIGNIA_STAT_LABELS = buildLabelMap("insigniaStat") as Record<
-  Locale,
-  Record<InsigniaStatKey, string>
->;
-
-export let SLOT_LABELS = buildLabelMap("slot") as Record<
-  Locale,
-  Record<string, string>
->;
-
-export let CATALOG_STAT_LABELS = buildLabelMap("catalogStat") as Record<
-  Locale,
-  Record<string, string>
->;
-
-export let PROFESSION_FAMILY_LABELS = buildLabelMap("professionFamily") as Record<
-  Locale,
-  Record<ProfessionFamily, string>
->;
-
-export let PROFESSION_NAME_LABELS = buildLabelMap("professionName") as Record<
-  Locale,
-  Record<BuiltinProfessionId, string>
->;
-
-export let PROFESSION_NOTE_LABELS = buildLabelMap("professionNote") as Record<
-  Locale,
-  Record<BuiltinProfessionId, string>
->;
+export let labels: LabelStore = buildLabels();
 
 // Rebuild the static label maps so newly added (e.g. imported) locales are
 // included. Without this, lookups for an unknown locale throw and blank the app.
 export function rebuildLabelMaps(): void {
-  STAT_LABELS_I18N = buildLabelMap("statLabels") as Record<
-    Locale,
-    Record<keyof CombatStats, string>
-  >;
-  CIRCUIT_KIND_LABELS = buildLabelMap("circuitKind") as Record<
-    Locale,
-    Record<CircuitKind, string>
-  >;
-  CIRCUIT_ELEMENT_LABELS = buildLabelMap("circuitElement") as Record<
-    Locale,
-    Record<CircuitElement | "all", string>
-  >;
-  CIRCUIT_STAT_LABELS = buildLabelMap("circuitStat") as Record<
-    Locale,
-    Record<CircuitStatKey, string>
-  >;
-  INSIGNIA_RARITY_LABELS = buildLabelMap("insigniaRarity") as Record<
-    Locale,
-    Record<InsigniaRarity, string>
-  >;
-  INSIGNIA_STAT_LABELS = buildLabelMap("insigniaStat") as Record<
-    Locale,
-    Record<InsigniaStatKey, string>
-  >;
-  SLOT_LABELS = buildLabelMap("slot") as Record<Locale, Record<string, string>>;
-  CATALOG_STAT_LABELS = buildLabelMap("catalogStat") as Record<
-    Locale,
-    Record<string, string>
-  >;
-  PROFESSION_FAMILY_LABELS = buildLabelMap("professionFamily") as Record<
-    Locale,
-    Record<ProfessionFamily, string>
-  >;
-  PROFESSION_NAME_LABELS = buildLabelMap("professionName") as Record<
-    Locale,
-    Record<BuiltinProfessionId, string>
-  >;
-  PROFESSION_NOTE_LABELS = buildLabelMap("professionNote") as Record<
-    Locale,
-    Record<BuiltinProfessionId, string>
-  >;
+  labels = buildLabels();
+}
+
+// Public accessor returning every label category map for a locale. When the
+// locale is unknown an empty map is returned (callers still fall back per-key).
+export function localeLabels(locale: Locale): Record<LabelCategory, Record<string, string>> {
+  return labels[locale] ?? ({} as Record<LabelCategory, Record<string, string>>);
+}
+
+function labelFor(cat: LabelCategory, key: string, locale: Locale, fallback: string): string {
+  return (
+    labels[locale]?.[cat]?.[key] ??
+    labels[FALLBACK_LOCALE]?.[cat]?.[key] ??
+    fallback
+  );
 }
 
 export function slotLabel(slot: string, locale: Locale = getLocale()): string {
-  return SLOT_LABELS[locale]?.[slot] ?? SLOT_LABELS[FALLBACK_LOCALE]?.[slot] ?? slot;
+  return labelFor("slot", slot, locale, slot);
 }
 
 export function statLabel(key: keyof CombatStats, locale: Locale = getLocale()): string {
-  return (
-    STAT_LABELS_I18N[locale]?.[key] ??
-    STAT_LABELS_I18N[FALLBACK_LOCALE]?.[key] ??
-    String(key)
-  );
+  return labelFor("statLabels", key as string, locale, String(key));
 }
 
 export function circuitKindLabel(kind: CircuitKind, locale: Locale = getLocale()): string {
-  return (
-    CIRCUIT_KIND_LABELS[locale]?.[kind] ??
-    CIRCUIT_KIND_LABELS[FALLBACK_LOCALE]?.[kind] ??
-    String(kind)
-  );
+  return labelFor("circuitKind", kind as string, locale, String(kind));
 }
 
 export function circuitElementLabel(
   el: CircuitElement | "all",
   locale: Locale = getLocale(),
 ): string {
-  return (
-    CIRCUIT_ELEMENT_LABELS[locale]?.[el] ??
-    CIRCUIT_ELEMENT_LABELS[FALLBACK_LOCALE]?.[el] ??
-    String(el)
-  );
+  return labelFor("circuitElement", el as string, locale, String(el));
 }
 
 export function circuitStatLabel(
   key: CircuitStatKey,
   locale: Locale = getLocale(),
 ): string {
-  return (
-    CIRCUIT_STAT_LABELS[locale]?.[key] ??
-    CIRCUIT_STAT_LABELS[FALLBACK_LOCALE]?.[key] ??
-    String(key)
-  );
+  return labelFor("circuitStat", key as string, locale, String(key));
 }
 
 export function insigniaRarityLabel(
   rarity: InsigniaRarity,
   locale: Locale = getLocale(),
 ): string {
-  return (
-    INSIGNIA_RARITY_LABELS[locale]?.[rarity] ??
-    INSIGNIA_RARITY_LABELS[FALLBACK_LOCALE]?.[rarity] ??
-    String(rarity)
-  );
+  return labelFor("insigniaRarity", rarity as string, locale, String(rarity));
 }
 
 export function insigniaStatLabel(
   key: InsigniaStatKey,
   locale: Locale = getLocale(),
 ): string {
-  return (
-    INSIGNIA_STAT_LABELS[locale]?.[key] ??
-    INSIGNIA_STAT_LABELS[FALLBACK_LOCALE]?.[key] ??
-    String(key)
-  );
+  return labelFor("insigniaStat", key as string, locale, String(key));
 }
 
 export function catalogStatLabel(key: string, locale: Locale = getLocale()): string {
-  return (
-    CATALOG_STAT_LABELS[locale]?.[key] ??
-    CATALOG_STAT_LABELS[FALLBACK_LOCALE]?.[key] ??
-    key
-  );
+  return labelFor("catalogStat", key, locale, key);
 }
 
 export function professionFamilyLabel(
   family: ProfessionFamily,
   locale: Locale = getLocale(),
 ): string {
-  return (
-    PROFESSION_FAMILY_LABELS[locale]?.[family] ??
-    PROFESSION_FAMILY_LABELS[FALLBACK_LOCALE]?.[family] ??
-    String(family)
-  );
+  return labelFor("professionFamily", family as string, locale, String(family));
 }
 
 export function professionNameLabel(
@@ -562,9 +466,9 @@ export function professionNameLabel(
 ): string {
   if (!id) return fallback ?? "";
   const labeled =
-    PROFESSION_NAME_LABELS[locale]?.[id as BuiltinProfessionId] ??
-    PROFESSION_NAME_LABELS[FALLBACK_LOCALE]?.[id as BuiltinProfessionId];
-  return labeled ?? fallback ?? id;
+    labels[locale]?.["professionName"]?.[id as string] ??
+    labels[FALLBACK_LOCALE]?.["professionName"]?.[id as string];
+  return labeled ?? fallback ?? (id as string);
 }
 
 export function professionNoteLabel(
@@ -574,9 +478,9 @@ export function professionNoteLabel(
 ): string {
   if (!id) return fallback ?? "";
   const labeled =
-    PROFESSION_NOTE_LABELS[locale]?.[id as BuiltinProfessionId] ??
-    PROFESSION_NOTE_LABELS[FALLBACK_LOCALE]?.[id as BuiltinProfessionId];
-  return labeled ?? fallback ?? id;
+    labels[locale]?.["professionNote"]?.[id as string] ??
+    labels[FALLBACK_LOCALE]?.["professionNote"]?.[id as string];
+  return labeled ?? fallback ?? (id as string);
 }
 
 rebuildAll();
