@@ -9,6 +9,7 @@ import type {
   ProfessionOverride,
   Profile,
 } from "./types";
+import { activeSourceIdsOf } from "./types";
 import demoData from "../data/demoData.json";
 import { parseObservedDamage } from "./compare";
 import { emptyStats, makeId } from "./damage";
@@ -71,7 +72,7 @@ function emptyPersistedState(): PersistedState {
 }
 
 function normalizeStoredProfile(raw: Profile): Profile {
-  return {
+  const merged: Profile = {
     ...raw,
     element: raw.element ?? "all",
     circuitSchemeId: raw.circuitSchemeId ?? null,
@@ -79,6 +80,8 @@ function normalizeStoredProfile(raw: Profile): Profile {
     professionId: raw.professionId ?? null,
     observedTrainingDamage: parseObservedDamage(raw.observedTrainingDamage),
   };
+  merged.activeSourceIds = activeSourceIdsOf(merged);
+  return merged;
 }
 
 /** True when the user already has saved app state in this browser. */
@@ -172,6 +175,7 @@ export function blankProfile(name = "新配置"): Profile {
     element: "all",
     equipped: {},
     itemIds: [],
+    activeSourceIds: [],
     circuitSchemeId: null,
     insigniaSchemeId: null,
     professionId: null,

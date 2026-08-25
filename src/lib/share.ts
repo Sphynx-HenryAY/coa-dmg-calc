@@ -12,6 +12,7 @@ import type {
   Profile,
   StatBag,
 } from "./types";
+import { activeSourceIdsOf } from "./types";
 import { parseObservedDamage } from "./compare";
 import { emptyStats, makeId } from "./damage";
 import { isProfessionId } from "./profession";
@@ -291,6 +292,7 @@ function normalizeProfile(raw: unknown): Profile | null {
     base: normalizeCombatStats(src.base),
     equipped,
     itemIds,
+    activeSourceIds: activeSourceIdsOf({ equipped, itemIds } as Profile),
     circuitSchemeId:
       typeof src.circuitSchemeId === "string" && src.circuitSchemeId
         ? src.circuitSchemeId
@@ -472,6 +474,7 @@ function slimProfile(profile: Profile): Profile {
     base: normalizeCombatStats(profile.base),
     equipped,
     itemIds: [...profile.itemIds],
+    activeSourceIds: activeSourceIdsOf(profile),
     circuitSchemeId: profile.circuitSchemeId ?? null,
     insigniaSchemeId: profile.insigniaSchemeId ?? null,
     professionId: profile.professionId ?? null,

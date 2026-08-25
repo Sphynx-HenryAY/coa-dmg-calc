@@ -274,6 +274,23 @@ export type InsigniaScheme = {
   updatedAt: string;
 };
 
+/**
+ * Unified gear + item model. Equipment has a `slot`; catalog items leave it
+ * `undefined` (multi-active, slotless). Used by the unified stat-collection
+ * path so gear and items share one resolution routine.
+ */
+export type StatSource = {
+  id: string;
+  name: string;
+  /** undefined = slotless item (multi-active); present = gear bound to that slot id. */
+  slot?: string;
+  stats: StatBag;
+  statLines: string[];
+  effects?: string[];
+  source?: string;
+  demo?: boolean;
+};
+
 export type Profile = {
   id: string;
   name: string;
@@ -287,6 +304,12 @@ export type Profile = {
   equipped: Record<string, string | null>;
   /** selected item ids */
   itemIds: string[];
+  /**
+   * Flat list of every active gear + item id for this profile, in no
+   * particular order. Kept in sync with `equipped`/`itemIds`; the damage
+   * path collects stats from these (enforcing one gear per slot).
+   */
+  activeSourceIds?: string[];
   /** Active circuit scheme id. */
   circuitSchemeId?: string | null;
   /** Active insignia scheme id. */
@@ -335,3 +358,26 @@ export type AppStore = {
   compareIds: string[];
   activeProfileId: string | null;
 };
+
+/**
+ * Flat list of every active gear + item id for a profile, derived from the
+ * canonical `equipped`/`itemIds` fields. Used by the unified StatSource
+ * damage path (enforcing at most one gear per slot).
+ */
+export function activeSourceIdsOf(profile: Profile): string[] {
+  const ids: string[] = [];
+  const seen = new Set<string>();
+  for (const id of Object.values(profile.equipped)) {
+    if (id && !seen.has(id)) {
+      seen.add(id);
+      ids.push(id);
+    }
+  }
+  for (const id of profile.itemIds) {
+    if (!seen.has(id)) {
+      seen.add(id);
+      ids.push(id);
+    }
+  }
+  return ids;
+}
