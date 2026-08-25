@@ -1,17 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import type {
   CircuitElement,
-  CircuitScheme,
-  DamageResult,
   InsigniaPiece,
   InsigniaRank,
   InsigniaRarity,
   InsigniaScheme,
   InsigniaSlotId,
   InsigniaStatKey,
-  Profile,
 } from "../lib/types";
 import { formatDamage, formatRatio } from "../lib/damage";
+import { formatSignedDamage, formatSignedRatio, gainClass } from "../lib/format";
 import {
   INSIGNIA_PERCENT_STATS,
   INSIGNIA_RANKS,
@@ -30,8 +28,6 @@ import {
   detachInsigniasFromSchemes,
   equippedCount,
   formatInsigniaAffix,
-  insigniaInputValue,
-  parseInsigniaInput,
   pieceStatLines,
   schemeContribution,
   slotHint,
@@ -39,6 +35,7 @@ import {
   type InsigniaSwapGain,
 } from "../lib/insignia";
 import { SchemeShareBox } from "./SchemeShareBox";
+import { AffixRowList } from "./forms";
 import { encodeInsigniaSchemeCode } from "../lib/schemeShare";
 import {
   insigniaRarityLabel,
@@ -47,24 +44,9 @@ import {
   slotLabel,
 } from "../lib/i18n";
 import { useI18n } from "../lib/I18nProvider";
+import { useAppStore } from "../store/AppStore";
 
 type AffixDraft = { stat: InsigniaStatKey | ""; value: number };
-
-type InsigniaTabProps = {
-  insignias: InsigniaPiece[];
-  schemes: InsigniaScheme[];
-  setInsignias: React.Dispatch<React.SetStateAction<InsigniaPiece[]>>;
-  setSchemes: React.Dispatch<React.SetStateAction<InsigniaScheme[]>>;
-  activeProfile: Profile | null;
-  onApplyScheme: (schemeId: string | null) => void;
-  onStatus: (msg: string) => void;
-  onImportShareCode: (code: string) => Promise<void>;
-  profileResult: (
-    profile: Profile,
-    circuitOverride?: CircuitScheme | null,
-    insigniaOverride?: InsigniaScheme | null,
-  ) => DamageResult;
-};
 
 const RARITY_OPTIONS: InsigniaRarity[] = ["epic", "rare"];
 const AFFIX_ROW_COUNT = 6;
@@ -95,18 +77,27 @@ function cleanAffixRows(
     .slice(0, AFFIX_ROW_COUNT);
 }
 
-export function InsigniaTab({
-  insignias,
-  schemes,
-  setInsignias,
-  setSchemes,
-  activeProfile,
-  onApplyScheme,
-  onStatus,
-  onImportShareCode,
-  profileResult,
-}: InsigniaTabProps) {
+export function InsigniaTab() {
   const { locale, m } = useI18n();
+  const {
+    insignias,
+    insigniaSchemes: schemes,
+    setInsignias,
+    setInsigniaSchemes: setSchemes,
+    activeProfile,
+    setStatus: onStatus,
+    importInsigniaSchemeFromCode: onImportShareCode,
+    profileResult,
+    updateProfile,
+  } = useAppStore();
+
+  const onApplyScheme = (schemeId: string | null) => {
+    if (!activeProfile) {
+      onStatus(m.pickProfileFirst);
+      return;
+    }
+    updateProfile(activeProfile.id, { insigniaSchemeId: schemeId });
+  };
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [rarity, setRarity] = useState<InsigniaRarity>("epic");
@@ -450,7 +441,23 @@ export function InsigniaTab({
         <p className="muted small">
           {m.effectsHint}
         </p>
-        <AffixRowList rows={affixes} onChange={setAffixes} />
+        <AffixRowList
+          rows={affixes}
+          options={INSIGNIA_STAT_OPTIONS}
+          percentSet={INSIGNIA_PERCENT_STATS}
+          labelFor={insigniaStatLabel}
+          suffixFor={(s) =>
+            s === "elementalPower" ||
+            s === "ice" ||
+            s === "fire" ||
+            s === "electric" ||
+            s === "dark"
+              ? m.elemPoints
+              : ""
+          }
+          rowHeader={(i) => m.effectN(i + 1)}
+          onChange={setAffixes}
+        />
 
         <div className="form-actions">
           <button type="button" onClick={savePiece}>
@@ -888,26 +895,6 @@ export function InsigniaTab({
   );
 }
 
-function formatSignedDamage(n: number): string {
-  const abs = formatDamage(Math.abs(n));
-  if (n > 0) return `+${abs}`;
-  if (n < 0) return `−${abs}`;
-  return abs;
-}
-
-function formatSignedRatio(n: number): string {
-  const abs = formatRatio(Math.abs(n));
-  if (n > 0) return `+${abs}`;
-  if (n < 0) return `−${abs}`;
-  return abs;
-}
-
-function gainClass(n: number): string {
-  if (n > 0) return "gain-pos";
-  if (n < 0) return "gain-neg";
-  return "gain-zero";
-}
-
 function librarySortValue(
   pieceId: string,
   equipped: Map<string, InsigniaSlotGain>,
@@ -1112,81 +1099,4 @@ function InsigniaGainPanel({
   );
 }
 
-function AffixRowList({
-  rows,
-  onChange,
-}: {
-  rows: AffixDraft[];
-  onChange: React.Dispatch<React.SetStateAction<AffixDraft[]>>;
-}) {
-  const { m } = useI18n();
-  return (
-    <div className="circuit-subs">
-      {rows.map((row, index) => (
-        <div key={index} className="circuit-sub-row">
-          <label>
-            {m.effectN(index + 1)}
-            <select
-              value={row.stat}
-              onChange={(e) => {
-                const nextStat = e.target.value as InsigniaStatKey | "";
-                onChange((list) => {
-                  const next = [...list];
-                  next[index] = { stat: nextStat, value: 0 };
-                  return next;
-                });
-              }}
-            >
-              <option value="">{m.unused}</option>
-              {INSIGNIA_STAT_OPTIONS.map((s) => (
-                <option key={s} value={s}>
-                  {insigniaStatLabel(s)}
-                  {INSIGNIA_PERCENT_STATS.has(s) ? " (%)" : ""}
-                  {s === "elementalPower" ||
-                  s === "ice" ||
-                  s === "fire" ||
-                  s === "electric" ||
-                  s === "dark"
-                    ? m.elemPoints
-                    : ""}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            {m.valueLabel}
-            {row.stat && INSIGNIA_PERCENT_STATS.has(row.stat) ? " (%)" : ""}
-            <div
-              className={
-                row.stat && INSIGNIA_PERCENT_STATS.has(row.stat)
-                  ? "input-with-suffix"
-                  : undefined
-              }
-            >
-              <input
-                type="number"
-                step={
-                  row.stat && INSIGNIA_PERCENT_STATS.has(row.stat) ? "0.1" : "1"
-                }
-                disabled={!row.stat}
-                value={row.stat ? insigniaInputValue(row.stat, row.value) : 0}
-                onChange={(e) => {
-                  if (!row.stat) return;
-                  const parsed = parseInsigniaInput(row.stat, e.target.value);
-                  onChange((list) => {
-                    const next = [...list];
-                    next[index] = { ...next[index]!, value: parsed };
-                    return next;
-                  });
-                }}
-              />
-              {row.stat && INSIGNIA_PERCENT_STATS.has(row.stat) ? (
-                <span className="input-suffix">%</span>
-              ) : null}
-            </div>
-          </label>
-        </div>
-      ))}
-    </div>
-  );
-}
+

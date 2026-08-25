@@ -6,10 +6,10 @@ import type {
   CircuitScheme,
   CircuitSlotId,
   CircuitStatKey,
-  DamageResult,
-  Profile,
 } from "../lib/types";
 import { formatDamage, formatRatio } from "../lib/damage";
+import { formatSignedDamage, formatSignedRatio, gainClass } from "../lib/format";
+import { parseStatInput, statInputValue } from "../lib/statInput";
 import {
   CIRCUIT_BREAK_STATS,
   CIRCUIT_KIND_LABEL,
@@ -21,7 +21,6 @@ import {
   assignCircuitToSlot,
   blankCircuitPiece,
   blankCircuitScheme,
-  circuitInputValue,
   compareSchemeCircuits,
   contributionLines,
   defaultCircuitName,
@@ -30,14 +29,15 @@ import {
   equippedCount,
   formatAffix,
   isValidMainStat,
-  parseCircuitInput,
   pieceStatLines,
   schemeContribution,
+  slotHint,
   type CircuitSlotGain,
   type CircuitSwapGain,
 } from "../lib/circuit";
 import { CircuitScanPanel } from "./CircuitScanPanel";
 import { SchemeShareBox } from "./SchemeShareBox";
+import { AffixRowList } from "./forms";
 import {
   inferKindFromMain,
   type CircuitParseResult,
@@ -49,23 +49,9 @@ import {
   slotLabel,
 } from "../lib/i18n";
 import { useI18n } from "../lib/I18nProvider";
+import { useAppStore } from "../store/AppStore";
 
 type SubDraft = { stat: CircuitStatKey | ""; value: number };
-
-type CircuitTabProps = {
-  circuits: CircuitPiece[];
-  schemes: CircuitScheme[];
-  setCircuits: React.Dispatch<React.SetStateAction<CircuitPiece[]>>;
-  setSchemes: React.Dispatch<React.SetStateAction<CircuitScheme[]>>;
-  activeProfile: Profile | null;
-  onApplyScheme: (schemeId: string | null) => void;
-  onStatus: (msg: string) => void;
-  onImportShareCode: (code: string) => Promise<void>;
-  profileResult: (
-    profile: Profile,
-    schemeOverride?: CircuitScheme | null,
-  ) => DamageResult;
-};
 
 const KIND_OPTIONS: CircuitKind[] = ["time", "nether", "star", "key"];
 
@@ -103,18 +89,27 @@ function cleanAffixRows(
     .slice(0, 4);
 }
 
-export function CircuitTab({
-  circuits,
-  schemes,
-  setCircuits,
-  setSchemes,
-  activeProfile,
-  onApplyScheme,
-  onStatus,
-  onImportShareCode,
-  profileResult,
-}: CircuitTabProps) {
+export function CircuitTab() {
   const { locale, m } = useI18n();
+  const {
+    circuits,
+    circuitSchemes: schemes,
+    setCircuits,
+    setCircuitSchemes: setSchemes,
+    activeProfile,
+    setStatus: onStatus,
+    importCircuitSchemeFromCode: onImportShareCode,
+    profileResult,
+    updateProfile,
+  } = useAppStore();
+
+  const onApplyScheme = (schemeId: string | null) => {
+    if (!activeProfile) {
+      onStatus(m.pickProfileFirst);
+      return;
+    }
+    updateProfile(activeProfile.id, { circuitSchemeId: schemeId });
+  };
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [kind, setKind] = useState<CircuitKind>("time");
@@ -469,9 +464,11 @@ export function CircuitTab({
               <input
                 type="number"
                 step={CIRCUIT_PERCENT_STATS.has(mainStat) ? "0.1" : "1"}
-                value={circuitInputValue(mainStat, mainValue)}
+                value={statInputValue(mainStat, mainValue, CIRCUIT_PERCENT_STATS)}
                 onChange={(e) =>
-                  setMainValue(parseCircuitInput(mainStat, e.target.value))
+                  setMainValue(
+                    parseStatInput(mainStat, e.target.value, CIRCUIT_PERCENT_STATS),
+                  )
                 }
               />
               {CIRCUIT_PERCENT_STATS.has(mainStat) ? (
@@ -486,6 +483,9 @@ export function CircuitTab({
           label={m.subStat}
           rows={subs}
           options={CIRCUIT_SUB_STATS}
+          percentSet={CIRCUIT_PERCENT_STATS}
+          labelFor={circuitStatLabel}
+          suffixFor={(s) => (s === "elementalPower" ? m.elemPoints : "")}
           used={usedSubStats}
           onChange={setSubs}
         />
@@ -496,6 +496,9 @@ export function CircuitTab({
           label={m.breakLabel}
           rows={breakthroughs}
           options={CIRCUIT_BREAK_STATS}
+          percentSet={CIRCUIT_PERCENT_STATS}
+          labelFor={circuitStatLabel}
+          suffixFor={(s) => (s === "elementalPower" ? m.elemPoints : "")}
           allowDuplicates
           onChange={setBreakthroughs}
         />
@@ -867,26 +870,6 @@ export function CircuitTab({
   );
 }
 
-function formatSignedDamage(n: number): string {
-  const abs = formatDamage(Math.abs(n));
-  if (n > 0) return `+${abs}`;
-  if (n < 0) return `−${abs}`;
-  return abs;
-}
-
-function formatSignedRatio(n: number): string {
-  const abs = formatRatio(Math.abs(n));
-  if (n > 0) return `+${abs}`;
-  if (n < 0) return `−${abs}`;
-  return abs;
-}
-
-function gainClass(n: number): string {
-  if (n > 0) return "gain-pos";
-  if (n < 0) return "gain-neg";
-  return "gain-zero";
-}
-
 function librarySortValue(
   pieceId: string,
   equipped: Map<string, CircuitSlotGain>,
@@ -1012,93 +995,4 @@ function CircuitGainPanel({
   );
 }
 
-function slotHint(kind: CircuitKind): string {
-  return CIRCUIT_SLOT_DEFS.filter((s) => s.kind === kind)
-    .map((s) => slotLabel(s.id))
-    .join(" / ");
-}
 
-function AffixRowList({
-  label,
-  rows,
-  options,
-  used,
-  allowDuplicates = false,
-  onChange,
-}: {
-  label: string;
-  rows: SubDraft[];
-  options: CircuitStatKey[];
-  used?: Set<CircuitStatKey>;
-  allowDuplicates?: boolean;
-  onChange: React.Dispatch<React.SetStateAction<SubDraft[]>>;
-}) {
-  const { m } = useI18n();
-  return (
-    <div className="circuit-subs">
-      {rows.map((row, index) => (
-        <div key={index} className="circuit-sub-row">
-          <label>
-            {label} {index + 1}
-            <select
-              value={row.stat}
-              onChange={(e) => {
-                const nextStat = e.target.value as CircuitStatKey | "";
-                onChange((list) => {
-                  const next = [...list];
-                  next[index] = { stat: nextStat, value: 0 };
-                  return next;
-                });
-              }}
-            >
-              <option value="">{m.unused}</option>
-              {options.map((s) => (
-                <option
-                  key={s}
-                  value={s}
-                  disabled={!allowDuplicates && !!used?.has(s) && row.stat !== s}
-                >
-                  {circuitStatLabel(s)}
-                  {CIRCUIT_PERCENT_STATS.has(s) ? " (%)" : ""}
-                  {s === "elementalPower" ? m.elemPoints : ""}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            {m.valueLabel}
-            {row.stat && CIRCUIT_PERCENT_STATS.has(row.stat) ? " (%)" : ""}
-            <div
-              className={
-                row.stat && CIRCUIT_PERCENT_STATS.has(row.stat)
-                  ? "input-with-suffix"
-                  : undefined
-              }
-            >
-              <input
-                type="number"
-                step={
-                  row.stat && CIRCUIT_PERCENT_STATS.has(row.stat) ? "0.1" : "1"
-                }
-                disabled={!row.stat}
-                value={row.stat ? circuitInputValue(row.stat, row.value) : 0}
-                onChange={(e) => {
-                  if (!row.stat) return;
-                  const parsed = parseCircuitInput(row.stat, e.target.value);
-                  onChange((list) => {
-                    const next = [...list];
-                    next[index] = { ...next[index]!, value: parsed };
-                    return next;
-                  });
-                }}
-              />
-              {row.stat && CIRCUIT_PERCENT_STATS.has(row.stat) ? (
-                <span className="input-suffix">%</span>
-              ) : null}
-            </div>
-          </label>
-        </div>
-      ))}
-    </div>
-  );
-}

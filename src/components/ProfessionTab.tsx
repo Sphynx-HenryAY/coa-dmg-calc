@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import type {
   CircuitElement,
-  DamageResult,
   DamageType,
   ProfessionDef,
   ProfessionFamily,
@@ -39,36 +38,21 @@ import {
   professionNoteLabel,
 } from "../lib/i18n";
 import { useI18n } from "../lib/I18nProvider";
+import { useAppStore } from "../store/AppStore";
 
-type ProfessionTabProps = {
-  activeProfile: Profile | null;
-  overrides: ProfessionOverride[];
-  setOverrides: React.Dispatch<React.SetStateAction<ProfessionOverride[]>>;
-  customProfessions: ProfessionDef[];
-  setCustomProfessions: React.Dispatch<React.SetStateAction<ProfessionDef[]>>;
-  profileResult: (
-    profile: Profile,
-    schemeOverride?: undefined,
-    insigniaOverride?: undefined,
-    extraProfessionOverrides?: ProfessionOverride[],
-  ) => DamageResult;
-  onApplyProfession: (profession: ProfessionDef) => void;
-  onDeleteCustomProfession: (id: ProfessionId) => void;
-  onStatus: (msg: string) => void;
-};
-
-export function ProfessionTab({
-  activeProfile,
-  overrides,
-  setOverrides,
-  customProfessions,
-  setCustomProfessions,
-  profileResult,
-  onApplyProfession,
-  onDeleteCustomProfession,
-  onStatus,
-}: ProfessionTabProps) {
+export function ProfessionTab() {
   const { m, locale } = useI18n();
+  const {
+    activeProfile,
+    professionOverrides: overrides,
+    setProfessionOverrides: setOverrides,
+    customProfessions,
+    setCustomProfessions,
+    profileResult,
+    applyProfessionToActive: onApplyProfession,
+    deleteCustomProfession: onDeleteCustomProfession,
+    setStatus: onStatus,
+  } = useAppStore();
   const catalog = listProfessions(customProfessions);
   const [selectedId, setSelectedId] = useState<ProfessionId>(
     activeProfile?.professionId ?? "elementalist",

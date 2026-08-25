@@ -12,6 +12,7 @@ import {
   translationsToUserLocale,
   type UserLocale,
 } from "../lib/i18n";
+import { useAppStore } from "../store/AppStore";
 
 type Draft = UserLocale;
 
@@ -37,8 +38,9 @@ function entryToText(value: unknown): string {
   return "";
 }
 
-export function LanguageTab({ onStatus }: { onStatus?: (s: string) => void }) {
+export function LanguageTab() {
   const { m, setLocale } = useI18n();
+  const { setStatus: onStatus } = useAppStore();
   const base = getBaseTranslations();
   const [draft, setDraft] = useState<Draft | null>(null);
   const [code, setCode] = useState("");
