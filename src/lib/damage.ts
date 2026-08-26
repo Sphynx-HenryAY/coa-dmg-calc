@@ -19,6 +19,7 @@ function computeFactors(
     resonance: i,
     damageBoost: j,
     circuitBoost: k,
+    petDamage: o = 0,
     allElementDamage: l,
     additionalDamage: m,
     statusDamage: n,
@@ -34,6 +35,7 @@ function computeFactors(
   const skillResonance = 1 + h + normal + i;
   const damageBoost = 1 + j;
   const circuit = 1 + k;
+  const pet = 1 + o;
   const allElement = 1 + l;
   const additional = 1 + m;
   const statusBoss = 1 + n + bossDamage;
@@ -47,6 +49,7 @@ function computeFactors(
     skillResonance *
     damageBoost *
     circuit *
+    pet *
     allElement *
     additional *
     statusBoss *
@@ -61,6 +64,7 @@ function computeFactors(
     skillResonance,
     damageBoost,
     circuit,
+    pet,
     allElement,
     additional,
     statusBoss,
@@ -91,6 +95,7 @@ export function calculateDamage(stats: CombatStats): DamageResult {
       skillResonance: main.skillResonance,
       damageBoost: main.damageBoost,
       circuit: main.circuit,
+      pet: main.pet,
       allElement: main.allElement,
       additional: main.additional,
       statusBoss: main.statusBoss,
@@ -147,6 +152,7 @@ export function emptyStats(): CombatStats {
     resonance: 0,
     damageBoost: 0,
     circuitBoost: 0,
+    petDamage: 0,
     allElementDamage: 0,
     additionalDamage: 0,
     statusDamage: 0,
@@ -202,6 +208,7 @@ export function addStats(a: CombatStats, bag: StatBag, damageType: DamageType): 
   if (bag.resonance) out.resonance += bag.resonance;
   if (bag.damageBoost) out.damageBoost += bag.damageBoost;
   if (bag.circuitBoost) out.circuitBoost += bag.circuitBoost;
+  if (bag.petDamage) out.petDamage += bag.petDamage;
   if (bag.allElementDamage) out.allElementDamage += bag.allElementDamage;
   if (bag.additionalDamage) out.additionalDamage += bag.additionalDamage;
   if (bag.statusDamage) out.statusDamage += bag.statusDamage;
@@ -270,6 +277,7 @@ export const STAT_LABELS: Record<keyof CombatStats, string> = {
   resonance: "共鳴",
   damageBoost: "提傷",
   circuitBoost: "迴路增傷",
+  petDamage: "寵物增傷",
   allElementDamage: "全屬性傷害",
   additionalDamage: "附加傷害",
   statusDamage: "異常",

@@ -9,6 +9,7 @@ export type CombatStats = {
   resonance: number;
   damageBoost: number;
   circuitBoost: number;
+  petDamage: number;
   allElementDamage: number;
   additionalDamage: number;
   statusDamage: number;
@@ -215,6 +216,31 @@ export type InsigniaRarity = "epic" | "rare";
 /** Same 11 equipment slots as circuits. */
 export type InsigniaSlotId = CircuitSlotId;
 
+/** A deck holds up to 4 cards; each card is one of these positional slots. */
+export type DeckSlotId = "1" | "2" | "3" | "4";
+
+/** A deck card: reuses insignia-style stat affixes for its damage bonuses. */
+export type DeckPiece = {
+  id: string;
+  name: string;
+  /** Which of the 4 deck positions this card may occupy. */
+  slots: DeckSlotId[];
+  affixes: InsigniaAffix[];
+  note: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+/** A 4-slot deck loadout. Profiles pick one as the active deck. */
+export type DeckScheme = {
+  id: string;
+  name: string;
+  note: string;
+  equipped: Partial<Record<DeckSlotId, string | null>>;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type InsigniaRank = 1 | 2 | 3;
 
 export type InsigniaStatKey =
@@ -314,6 +340,8 @@ export type Profile = {
   circuitSchemeId?: string | null;
   /** Active insignia scheme id. */
   insigniaSchemeId?: string | null;
+  /** Active deck scheme id. */
+  deckSchemeId?: string | null;
   /** Active advanced class. Cycle comes from the profession catalog. */
   professionId?: ProfessionId | null;
   /**
