@@ -4,6 +4,9 @@ import type {
   CircuitScheme,
   CircuitSlotId,
   CircuitStatKey,
+  DeckPiece,
+  DeckScheme,
+  DeckSlotId,
   InsigniaAffix,
   InsigniaPiece,
   InsigniaScheme,
@@ -21,10 +24,16 @@ import {
   normalizeInsigniaPiece,
   normalizeInsigniaScheme,
 } from "./insignia";
+import {
+  DECK_SLOT_IDS,
+  normalizeDeckPiece,
+  normalizeDeckScheme,
+} from "./deck";
 import { packToken, unpackToken } from "./share";
 
 export const CIRCUIT_SCHEME_PREFIX = "COA-CS1";
 export const INSIGNIA_SCHEME_PREFIX = "COA-IS1";
+export const DECK_SCHEME_PREFIX = "COA-DS1";
 
 type CompactAffix = [string, number];
 
@@ -73,7 +82,12 @@ export type InsigniaSchemeBundle = {
   pieces: InsigniaPiece[];
 };
 
-export type SchemeShareKind = "circuit" | "insignia";
+export type DeckSchemeBundle = {
+  scheme: DeckScheme;
+  pieces: DeckPiece[];
+};
+
+export type SchemeShareKind = "circuit" | "insignia" | "deck";
 
 function compactAffix(stat: string, value: number): CompactAffix {
   return [stat, value];
@@ -122,6 +136,23 @@ function collectInsigniaPieces(
   const out: InsigniaPiece[] = [];
   const seen = new Set<string>();
   for (const slot of INSIGNIA_SLOT_IDS) {
+    const id = scheme.equipped[slot];
+    if (!id || seen.has(id)) continue;
+    const piece = piecesById.get(id);
+    if (!piece) continue;
+    seen.add(id);
+    out.push(piece);
+  }
+  return out;
+}
+
+function collectDeckPieces(
+  scheme: DeckScheme,
+  piecesById: Map<string, DeckPiece>,
+): DeckPiece[] {
+  const out: DeckPiece[] = [];
+  const seen = new Set<string>();
+  for (const slot of DECK_SLOT_IDS) {
     const id = scheme.equipped[slot];
     if (!id || seen.has(id)) continue;
     const piece = piecesById.get(id);
@@ -261,8 +292,7 @@ function parseCircuitShare(raw: unknown): CircuitSchemeBundle | null {
   return { scheme, pieces };
 }
 
-function parseInsigniaShare(raw: unknown): InsigniaSchemeBundle | null {
-  if (!raw || typeof raw !== "object") return null;
+function parseInsigniaShare(raw: unknown): InsigniaSchemeBundle | null {  if (!raw || typeof raw !== "object") return null;
   const src = raw as Record<string, unknown>;
   if (src.v !== 1 || src.t !== "i") return null;
   if (!Array.isArray(src.p)) return null;
@@ -314,10 +344,110 @@ function parseInsigniaShare(raw: unknown): InsigniaSchemeBundle | null {
   return { scheme, pieces };
 }
 
+export async function encodeDeckSchemeCode(
+  scheme: DeckScheme,
+  piecesById: Map<string, DeckPiece>,
+): Promise<string> {
+  const pieces = collectDeckPieces(scheme, piecesById);
+  const indexById = new Map(pieces.map((p, i) => [p.id, i]));
+  const equipped: Array<[string, number]> = [];
+  for (const slot of DECK_SLOT_IDS) {
+    const id = scheme.equipped[slot];
+    if (!id) continue;
+    const index = indexById.get(id);
+    if (index === undefined) continue;
+    equipped.push([slot, index]);
+  }
+  const payload = {
+    v: 1,
+    t: "d",
+    n: scheme.name,
+    ...(scheme.note.trim() ? { o: scheme.note } : {}),
+    e: equipped,
+    p: pieces.map((piece) => ({
+      ...(piece.name.trim() ? { n: piece.name } : {}),
+      a: piece.affixes.map((a) => compactAffix(a.stat, a.value)),
+      ...(piece.note.trim() ? { o: piece.note } : {}),
+    })),
+  };
+  return packToken(JSON.stringify(payload), DECK_SCHEME_PREFIX);
+}
+
+function parseDeckShare(raw: unknown): DeckSchemeBundle | null {
+  if (!raw || typeof raw !== "object") return null;
+  const src = raw as Record<string, unknown>;
+  if (src.v !== 1 || src.t !== "d") return null;
+  if (!Array.isArray(src.p)) return null;
+  const now = new Date().toISOString();
+  const pieces: DeckPiece[] = [];
+  for (const item of src.p) {
+    if (!item || typeof item !== "object") continue;
+    const p = item as { n?: string; a?: unknown[]; o?: string };
+    const piece = normalizeDeckPiece({
+      id: makeId("dpc"),
+      name: typeof p.n === "string" ? p.n : "",
+      affixes: (p.a ?? [])
+        .map(expandAffix)
+        .filter((x): x is InsigniaAffix => x !== null)
+        .map((x) => ({ stat: x.stat as InsigniaStatKey, value: x.value })),
+      note: typeof p.o === "string" ? p.o : "",
+      createdAt: now,
+      updatedAt: now,
+    });
+    if (piece) pieces.push(piece);
+  }
+
+  const equipped: DeckScheme["equipped"] = {};
+  if (Array.isArray(src.e)) {
+    for (const row of src.e) {
+      if (!Array.isArray(row) || row.length < 2) continue;
+      const slot = row[0];
+      const index = typeof row[1] === "number" ? row[1] : Number(row[1]);
+      if (typeof slot !== "string" || !Number.isInteger(index)) continue;
+      if (!(DECK_SLOT_IDS as string[]).includes(slot)) continue;
+      const piece = pieces[index];
+      if (!piece) continue;
+      equipped[slot as DeckSlotId] = piece.id;
+    }
+  }
+
+  const scheme = normalizeDeckScheme({
+    id: makeId("dsch"),
+    name: typeof src.n === "string" ? src.n : "牌組方案",
+    note: typeof src.o === "string" ? src.o : "",
+    equipped,
+    createdAt: now,
+    updatedAt: now,
+  });
+  if (!scheme) return null;
+  return { scheme, pieces };
+}
+
+export async function decodeDeckSchemeCode(
+  text: string,
+): Promise<DeckSchemeBundle | null> {
+  const raw = await unpackToken(text, DECK_SCHEME_PREFIX);
+  return parseDeckShare(raw);
+}
+
+export function finalizeDeckSchemeImport(
+  bundle: DeckSchemeBundle,
+  existingNames: string[],
+): DeckSchemeBundle {
+  return {
+    scheme: {
+      ...bundle.scheme,
+      name: uniqueSchemeName(bundle.scheme.name, existingNames),
+    },
+    pieces: bundle.pieces,
+  };
+}
+
 export function peekSchemeShareKind(text: string): SchemeShareKind | null {
   const compact = text.replace(/\s+/g, "").toUpperCase();
   if (compact.includes("COA-CS1.")) return "circuit";
   if (compact.includes("COA-IS1.")) return "insignia";
+  if (compact.includes("COA-DS1.")) return "deck";
   return null;
 }
 

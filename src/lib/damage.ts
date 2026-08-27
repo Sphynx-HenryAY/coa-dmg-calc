@@ -296,6 +296,7 @@ export const PERCENT_STATS = new Set<keyof CombatStats>([
   "resonance",
   "damageBoost",
   "circuitBoost",
+  "petDamage",
   "allElementDamage",
   "additionalDamage",
   "statusDamage",

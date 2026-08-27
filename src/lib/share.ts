@@ -5,6 +5,8 @@ import type {
   CircuitScheme,
   CombatStats,
   DamageType,
+  DeckPiece,
+  DeckScheme,
   Equipment,
   InsigniaPiece,
   InsigniaScheme,
@@ -21,6 +23,7 @@ import {
   normalizeInsigniaPiece,
   normalizeInsigniaScheme,
 } from "./insignia";
+import { normalizeDeckPiece, normalizeDeckScheme } from "./deck";
 
 export const SHARE_HASH_PREFIX = "s=";
 
@@ -35,6 +38,8 @@ export type SharePayloadFull = {
   circuitSchemes?: CircuitScheme[];
   insignias?: InsigniaPiece[];
   insigniaSchemes?: InsigniaScheme[];
+  decks?: DeckPiece[];
+  deckSchemes?: DeckScheme[];
 };
 
 /**
@@ -75,6 +80,8 @@ export type SharePayloadMultiFull = {
   circuitSchemes?: CircuitScheme[];
   insignias?: InsigniaPiece[];
   insigniaSchemes?: InsigniaScheme[];
+  decks?: DeckPiece[];
+  deckSchemes?: DeckScheme[];
 };
 
 export type SharePayload =
@@ -99,6 +106,8 @@ export type ShareImportResult = {
   schemesToAdd: CircuitScheme[];
   insigniasToAdd: InsigniaPiece[];
   insigniaSchemesToAdd: InsigniaScheme[];
+  decksToAdd: DeckPiece[];
+  deckSchemesToAdd: DeckScheme[];
   unhideEquipmentIds: string[];
   unhideItemIds: string[];
 };
@@ -113,6 +122,7 @@ const BASE_STAT_KEYS: Array<keyof CombatStats> = [
   "resonance",
   "damageBoost",
   "circuitBoost",
+  "petDamage",
   "allElementDamage",
   "additionalDamage",
   "statusDamage",
@@ -301,6 +311,10 @@ function normalizeProfile(raw: unknown): Profile | null {
       typeof src.insigniaSchemeId === "string" && src.insigniaSchemeId
         ? src.insigniaSchemeId
         : null,
+    deckSchemeId:
+      typeof src.deckSchemeId === "string" && src.deckSchemeId
+        ? src.deckSchemeId
+        : null,
     professionId: parseProfessionId(src.professionId),
     observedTrainingDamage: parseObservedDamage(src.observedTrainingDamage),
     createdAt: typeof src.createdAt === "string" ? src.createdAt : now,
@@ -383,6 +397,16 @@ export function parseSharePayload(data: unknown): SharePayload | null {
           .map(normalizeInsigniaScheme)
           .filter((x): x is InsigniaScheme => x !== null)
       : [];
+    const decks = Array.isArray(src.decks)
+      ? src.decks
+          .map(normalizeDeckPiece)
+          .filter((x): x is DeckPiece => x !== null)
+      : [];
+    const deckSchemes = Array.isArray(src.deckSchemes)
+      ? src.deckSchemes
+          .map(normalizeDeckScheme)
+          .filter((x): x is DeckScheme => x !== null)
+      : [];
     return {
       v: 3,
       kind: "multi-full",
@@ -393,6 +417,8 @@ export function parseSharePayload(data: unknown): SharePayload | null {
       circuitSchemes,
       insignias,
       insigniaSchemes,
+      decks,
+      deckSchemes,
     };
   }
 
@@ -446,6 +472,14 @@ export function parseSharePayload(data: unknown): SharePayload | null {
         .map(normalizeInsigniaScheme)
         .filter((x): x is InsigniaScheme => x !== null)
     : [];
+  const decks = Array.isArray(src.decks)
+    ? src.decks.map(normalizeDeckPiece).filter((x): x is DeckPiece => x !== null)
+    : [];
+  const deckSchemes = Array.isArray(src.deckSchemes)
+    ? src.deckSchemes
+        .map(normalizeDeckScheme)
+        .filter((x): x is DeckScheme => x !== null)
+    : [];
   return {
     v: 1,
     kind: "full",
@@ -456,6 +490,8 @@ export function parseSharePayload(data: unknown): SharePayload | null {
     circuitSchemes,
     insignias,
     insigniaSchemes,
+    decks,
+    deckSchemes,
   };
 }
 
@@ -477,6 +513,7 @@ function slimProfile(profile: Profile): Profile {
     activeSourceIds: activeSourceIdsOf(profile),
     circuitSchemeId: profile.circuitSchemeId ?? null,
     insigniaSchemeId: profile.insigniaSchemeId ?? null,
+    deckSchemeId: profile.deckSchemeId ?? null,
     professionId: profile.professionId ?? null,
     observedTrainingDamage: parseObservedDamage(profile.observedTrainingDamage),
     createdAt: profile.createdAt,
@@ -492,6 +529,8 @@ function collectReferencedCatalog(
   schemesById: Map<string, CircuitScheme> = new Map(),
   insigniasById: Map<string, InsigniaPiece> = new Map(),
   insigniaSchemesById: Map<string, InsigniaScheme> = new Map(),
+  decksById: Map<string, DeckPiece> = new Map(),
+  deckSchemesById: Map<string, DeckScheme> = new Map(),
 ): {
   equipment: Equipment[];
   items: CatalogItem[];
@@ -499,6 +538,8 @@ function collectReferencedCatalog(
   circuitSchemes: CircuitScheme[];
   insignias: InsigniaPiece[];
   insigniaSchemes: InsigniaScheme[];
+  decks: DeckPiece[];
+  deckSchemes: DeckScheme[];
 } {
   const equipment: Equipment[] = [];
   const seenEq = new Set<string>();
@@ -512,6 +553,10 @@ function collectReferencedCatalog(
   const seenInsignia = new Set<string>();
   const insigniaSchemes: InsigniaScheme[] = [];
   const seenInsigniaScheme = new Set<string>();
+  const decks: DeckPiece[] = [];
+  const seenDeck = new Set<string>();
+  const deckSchemes: DeckScheme[] = [];
+  const seenDeckScheme = new Set<string>();
 
   for (const profile of profiles) {
     for (const eqId of Object.values(profile.equipped)) {
@@ -610,8 +655,38 @@ function collectReferencedCatalog(
         }
       }
     }
+
+    const deckSchemeId = profile.deckSchemeId;
+    if (deckSchemeId && !seenDeckScheme.has(deckSchemeId)) {
+      const scheme = deckSchemesById.get(deckSchemeId);
+      if (scheme) {
+        seenDeckScheme.add(deckSchemeId);
+        deckSchemes.push({
+          id: scheme.id,
+          name: scheme.name,
+          note: scheme.note,
+          equipped: { ...scheme.equipped },
+          createdAt: scheme.createdAt,
+          updatedAt: scheme.updatedAt,
+        });
+        for (const did of Object.values(scheme.equipped)) {
+          if (!did || seenDeck.has(did)) continue;
+          seenDeck.add(did);
+          const piece = decksById.get(did);
+          if (!piece) continue;
+          decks.push({
+            id: piece.id,
+            name: piece.name,
+            affixes: piece.affixes.map((a) => ({ ...a })),
+            note: piece.note,
+            createdAt: piece.createdAt,
+            updatedAt: piece.updatedAt,
+          });
+        }
+      }
+    }
   }
-  return { equipment, items, circuits, circuitSchemes, insignias, insigniaSchemes };
+  return { equipment, items, circuits, circuitSchemes, insignias, insigniaSchemes, decks, deckSchemes };
 }
 
 /**
@@ -625,6 +700,8 @@ export function buildSharePayload(
   schemesById: Map<string, CircuitScheme> = new Map(),
   insigniasById: Map<string, InsigniaPiece> = new Map(),
   insigniaSchemesById: Map<string, InsigniaScheme> = new Map(),
+  decksById: Map<string, DeckPiece> = new Map(),
+  deckSchemesById: Map<string, DeckScheme> = new Map(),
 ): SharePayloadFull | SharePayloadMultiFull {
   const list = (Array.isArray(profiles) ? profiles : [profiles]).map(slimProfile);
   if (list.length === 0) {
@@ -637,6 +714,8 @@ export function buildSharePayload(
     circuitSchemes,
     insignias,
     insigniaSchemes,
+    decks,
+    deckSchemes,
   } = collectReferencedCatalog(
     list,
     equipmentById,
@@ -645,6 +724,8 @@ export function buildSharePayload(
     schemesById,
     insigniasById,
     insigniaSchemesById,
+    decksById,
+    deckSchemesById,
   );
 
   if (list.length === 1) {
@@ -658,6 +739,8 @@ export function buildSharePayload(
       circuitSchemes,
       insignias,
       insigniaSchemes,
+      decks,
+      deckSchemes,
     };
   }
 
@@ -671,6 +754,8 @@ export function buildSharePayload(
     circuitSchemes,
     insignias,
     insigniaSchemes,
+    decks,
+    deckSchemes,
   };
 }
 
@@ -765,6 +850,10 @@ function serializePayload(payload: SharePayload): string {
       ...(payload.insigniaSchemes?.length
         ? { insigniaSchemes: payload.insigniaSchemes }
         : {}),
+      ...(payload.decks?.length ? { decks: payload.decks } : {}),
+      ...(payload.deckSchemes?.length
+        ? { deckSchemes: payload.deckSchemes }
+        : {}),
     });
   }
   return JSON.stringify(payload);
@@ -846,7 +935,7 @@ export async function packToken(json: string, prefix: string): Promise<string> {
 /** Pull the first COA-* token out of pasted text (whitespace / labels ignored). */
 export function extractPackedToken(text: string): string {
   const compact = text.replace(/\s+/g, "");
-  const match = compact.match(/COA-(?:CS|IS)1\.[zu]\.[A-Za-z0-9_-]+/i);
+  const match = compact.match(/COA-(?:CS|IS|DS)1\.[zu]\.[A-Za-z0-9_-]+/i);
   return match ? match[0] : compact;
 }
 
@@ -880,12 +969,16 @@ function mergeCatalogAdds(
   schemes: CircuitScheme[],
   insignias: InsigniaPiece[],
   insigniaSchemes: InsigniaScheme[],
+  decks: DeckPiece[],
+  deckSchemes: DeckScheme[],
   knownEquipmentIds: Set<string>,
   knownItemIds: Set<string>,
   knownCircuitIds: Set<string>,
   knownSchemeIds: Set<string>,
   knownInsigniaIds: Set<string>,
   knownInsigniaSchemeIds: Set<string>,
+  knownDeckIds: Set<string>,
+  knownDeckSchemeIds: Set<string>,
   hiddenEquipmentIds: Set<string>,
   hiddenItemIds: Set<string>,
 ): Pick<
@@ -896,6 +989,8 @@ function mergeCatalogAdds(
   | "schemesToAdd"
   | "insigniasToAdd"
   | "insigniaSchemesToAdd"
+  | "decksToAdd"
+  | "deckSchemesToAdd"
   | "unhideEquipmentIds"
   | "unhideItemIds"
 > {
@@ -939,6 +1034,15 @@ function mergeCatalogAdds(
     if (!knownInsigniaSchemeIds.has(scheme.id)) insigniaSchemesToAdd.push(scheme);
   }
 
+  const decksToAdd: DeckPiece[] = [];
+  for (const piece of decks) {
+    if (!knownDeckIds.has(piece.id)) decksToAdd.push(piece);
+  }
+  const deckSchemesToAdd: DeckScheme[] = [];
+  for (const scheme of deckSchemes) {
+    if (!knownDeckSchemeIds.has(scheme.id)) deckSchemesToAdd.push(scheme);
+  }
+
   return {
     equipmentToAdd,
     itemsToAdd,
@@ -946,6 +1050,8 @@ function mergeCatalogAdds(
     schemesToAdd,
     insigniasToAdd,
     insigniaSchemesToAdd,
+    decksToAdd,
+    deckSchemesToAdd,
     unhideEquipmentIds,
     unhideItemIds,
   };
@@ -988,6 +1094,7 @@ export function fullProfileContentEqual(a: Profile, b: Profile): boolean {
     itemIdsEqual(a.itemIds, b.itemIds) &&
     (a.circuitSchemeId ?? null) === (b.circuitSchemeId ?? null) &&
     (a.insigniaSchemeId ?? null) === (b.insigniaSchemeId ?? null) &&
+    (a.deckSchemeId ?? null) === (b.deckSchemeId ?? null) &&
     (a.professionId ?? null) === (b.professionId ?? null) &&
     (parseObservedDamage(a.observedTrainingDamage) ?? null) ===
       (parseObservedDamage(b.observedTrainingDamage) ?? null)
@@ -1053,6 +1160,8 @@ function emptyCatalogAdds(): Pick<
   | "schemesToAdd"
   | "insigniasToAdd"
   | "insigniaSchemesToAdd"
+  | "decksToAdd"
+  | "deckSchemesToAdd"
   | "unhideEquipmentIds"
   | "unhideItemIds"
 > {
@@ -1063,6 +1172,8 @@ function emptyCatalogAdds(): Pick<
     schemesToAdd: [],
     insigniasToAdd: [],
     insigniaSchemesToAdd: [],
+    decksToAdd: [],
+    deckSchemesToAdd: [],
     unhideEquipmentIds: [],
     unhideItemIds: [],
   };
@@ -1084,6 +1195,8 @@ export function prepareShareImport(
   knownSchemeIds: Set<string> = new Set(),
   knownInsigniaIds: Set<string> = new Set(),
   knownInsigniaSchemeIds: Set<string> = new Set(),
+  knownDeckIds: Set<string> = new Set(),
+  knownDeckSchemeIds: Set<string> = new Set(),
 ): ShareImportResult {
   const now = new Date().toISOString();
   const claimedIds = new Set<string>();
@@ -1189,6 +1302,8 @@ export function prepareShareImport(
     schemes: CircuitScheme[] = [],
     insignias: InsigniaPiece[] = [],
     insigniaSchemes: InsigniaScheme[] = [],
+    decks: DeckPiece[] = [],
+    deckSchemes: DeckScheme[] = [],
   ): ShareImportResult => {
     // Local ids already taken by stored profiles (or claimed this pass).
     const usedIds = new Set(existingProfiles.map((p) => p.id));
@@ -1231,12 +1346,16 @@ export function prepareShareImport(
         schemes,
         insignias,
         insigniaSchemes,
+        decks,
+        deckSchemes,
         knownEquipmentIds,
         knownItemIds,
         knownCircuitIds,
         knownSchemeIds,
         knownInsigniaIds,
         knownInsigniaSchemeIds,
+        knownDeckIds,
+        knownDeckSchemeIds,
         hiddenEquipmentIds,
         hiddenItemIds,
       ),
@@ -1252,6 +1371,8 @@ export function prepareShareImport(
       payload.circuitSchemes ?? [],
       payload.insignias ?? [],
       payload.insigniaSchemes ?? [],
+      payload.decks ?? [],
+      payload.deckSchemes ?? [],
     );
   }
 
@@ -1264,6 +1385,8 @@ export function prepareShareImport(
     payload.circuitSchemes ?? [],
     payload.insignias ?? [],
     payload.insigniaSchemes ?? [],
+    payload.decks ?? [],
+    payload.deckSchemes ?? [],
   );
 }
 

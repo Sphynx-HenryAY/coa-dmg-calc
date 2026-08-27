@@ -5,6 +5,7 @@ import { useI18n } from "./lib/I18nProvider";
 import { AppStoreProvider, useAppStore, type Tab } from "./store/AppStore";
 import { CircuitTab } from "./components/CircuitTab";
 import { InsigniaTab } from "./components/InsigniaTab";
+import { DeckTab } from "./components/DeckTab";
 import { ProfessionTab } from "./components/ProfessionTab";
 import { LanguageTab } from "./components/LanguageTab";
 import { ProfilesTab } from "./components/ProfilesTab";
@@ -80,6 +81,7 @@ function Shell(): React.JSX.Element {
             ["gear", m.tabGear, m.tabGearShort],
             ["circuits", m.tabCircuits, m.tabCircuitsShort],
             ["insignias", m.tabInsignias, m.tabInsigniasShort],
+            ["decks", m.tabDecks, m.tabDecksShort],
             ["professions", m.tabProfessions, m.tabProfessionsShort],
             ["compare", m.tabCompare, m.tabCompareShort],
             ["languages", m.tabLanguages, m.tabLanguagesShort],
@@ -102,6 +104,7 @@ function Shell(): React.JSX.Element {
       {tab === "gear" && <GearItemsTab />}
       {tab === "circuits" && <CircuitTab />}
       {tab === "insignias" && <InsigniaTab />}
+      {tab === "decks" && <DeckTab />}
       {tab === "professions" && <ProfessionTab />}
       {tab === "languages" && <LanguageTab />}
       {tab === "compare" && <CompareTab />}

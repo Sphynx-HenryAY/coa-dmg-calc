@@ -84,6 +84,7 @@ export const INSIGNIA_STAT_LABEL: Record<InsigniaStatKey, string> = {
   int: "智力",
   otherworld: "異界傷害",
   resonanceCharge: "共鳴充能",
+  petDamage: "寵物增傷",
 };
 
 /** Stats entered/displayed as percentages. */
@@ -105,6 +106,7 @@ export const INSIGNIA_PERCENT_STATS = new Set<InsigniaStatKey>([
   "mDef",
   "otherworld",
   "resonanceCharge",
+  "petDamage",
 ]);
 
 export const INSIGNIA_ELEMENT_STATS = new Set<InsigniaStatKey>([
@@ -141,6 +143,7 @@ export const INSIGNIA_STAT_OPTIONS: InsigniaStatKey[] = [
   "int",
   "otherworld",
   "resonanceCharge",
+  "petDamage",
 ];
 
 export const INSIGNIA_RANKS: InsigniaRank[] = [1, 2, 3];
@@ -248,7 +251,7 @@ export type InsigniaExtraStats = CircuitExtraStats & {
 
 export type InsigniaContribution = LoadoutContribution<InsigniaExtraStats>;
 
-function emptyExtra(): InsigniaExtraStats {
+export function emptyExtra(): InsigniaExtraStats {
   return {
     hp: 0,
     vit: 0,
@@ -357,6 +360,9 @@ export function applyInsigniaAffix(
     case "resonanceCharge":
       extra.resonanceCharge += value;
       addToBag(bag, "resonanceCharge", value);
+      return;
+    case "petDamage":
+      addToBag(bag, "petDamage", value);
       return;
     default:
       return;

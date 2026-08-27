@@ -17,6 +17,8 @@ import type {
   CircuitPiece,
   CircuitScheme,
   CombatStats,
+  DeckPiece,
+  DeckScheme,
   Equipment,
   InsigniaPiece,
   InsigniaScheme,
@@ -34,6 +36,11 @@ import {
   normalizeProfessionOverride,
   applyProfessionCycle,
 } from "../lib/profession";
+import {
+  schemeContribution as deckSchemeContribution,
+  normalizeDeckPiece,
+  normalizeDeckScheme,
+} from "../lib/deck";
 import {
   getDemoEquipment,
   getDemoItems,
@@ -59,12 +66,16 @@ import {
 import {
   decodeCircuitSchemeCode,
   decodeInsigniaSchemeCode,
+  decodeDeckSchemeCode,
   encodeCircuitSchemeCode,
+  encodeDeckSchemeCode,
   encodeInsigniaSchemeCode,
   finalizeCircuitSchemeImport,
+  finalizeDeckSchemeImport,
   finalizeInsigniaSchemeImport,
   peekSchemeShareKind,
   type CircuitSchemeBundle,
+  type DeckSchemeBundle,
   type InsigniaSchemeBundle,
 } from "../lib/schemeShare";
 import {
@@ -77,6 +88,7 @@ export type Tab =
   | "gear"
   | "circuits"
   | "insignias"
+  | "decks"
   | "professions"
   | "compare"
   | "languages";
@@ -112,6 +124,10 @@ export type AppStoreValue = {
   setInsignias: Dispatch<SetStateAction<InsigniaPiece[]>>;
   insigniaSchemes: InsigniaScheme[];
   setInsigniaSchemes: Dispatch<SetStateAction<InsigniaScheme[]>>;
+  decks: DeckPiece[];
+  setDecks: Dispatch<SetStateAction<DeckPiece[]>>;
+  deckSchemes: DeckScheme[];
+  setDeckSchemes: Dispatch<SetStateAction<DeckScheme[]>>;
   professionOverrides: ProfessionOverride[];
   setProfessionOverrides: Dispatch<SetStateAction<ProfessionOverride[]>>;
   customProfessions: ProfessionDef[];
@@ -128,6 +144,8 @@ export type AppStoreValue = {
   schemesById: Map<string, CircuitScheme>;
   insigniasById: Map<string, InsigniaPiece>;
   insigniaSchemesById: Map<string, InsigniaScheme>;
+  decksById: Map<string, DeckPiece>;
+  deckSchemesById: Map<string, DeckScheme>;
   activeProfile: Profile | null;
 
   editorPanelRef: RefObject<HTMLElement>;
@@ -148,13 +166,16 @@ export type AppStoreValue = {
   shareSelectedProfilesStats: () => Promise<void>;
   exportActiveProfileCircuitScheme: () => Promise<string>;
   exportActiveProfileInsigniaScheme: () => Promise<string>;
+  exportActiveProfileDeckScheme: () => Promise<string>;
   importCircuitSchemeFromCode: (code: string) => Promise<void>;
   importInsigniaSchemeFromCode: (code: string) => Promise<void>;
+  importDeckSchemeFromCode: (code: string) => Promise<void>;
   importSchemeOntoActiveProfile: (code: string) => Promise<void>;
   deleteCustomProfession: (id: string) => void;
 
   applyImportedCircuitScheme: (bundle: CircuitSchemeBundle) => Profile;
   applyImportedInsigniaScheme: (bundle: InsigniaSchemeBundle) => Profile;
+  applyImportedDeckScheme: (bundle: DeckSchemeBundle) => Profile;
   exportAll: () => void;
   importAll: (file: File) => Promise<void>;
 
@@ -163,6 +184,7 @@ export type AppStoreValue = {
     schemeOverride?: CircuitScheme | null,
     insigniaOverride?: InsigniaScheme | null,
     extraProfessionOverrides?: ProfessionOverride[],
+    deckOverride?: DeckScheme | null,
   ) => import("../lib/types").DamageResult;
   effectiveStatsFor: (profile: Profile) => CombatStats;
 };
@@ -199,6 +221,8 @@ export function AppStoreProvider({
   const [circuitSchemes, setCircuitSchemes] = useState<CircuitScheme[]>([]);
   const [insignias, setInsignias] = useState<InsigniaPiece[]>([]);
   const [insigniaSchemes, setInsigniaSchemes] = useState<InsigniaScheme[]>([]);
+  const [decks, setDecks] = useState<DeckPiece[]>([]);
+  const [deckSchemes, setDeckSchemes] = useState<DeckScheme[]>([]);
   const [professionOverrides, setProfessionOverrides] = useState<
     ProfessionOverride[]
   >([]);
@@ -263,6 +287,18 @@ export function AppStoreProvider({
     return map;
   }, [insigniaSchemes]);
 
+  const decksById = useMemo(() => {
+    const map = new Map<string, DeckPiece>();
+    for (const p of decks) map.set(p.id, p);
+    return map;
+  }, [decks]);
+
+  const deckSchemesById = useMemo(() => {
+    const map = new Map<string, DeckScheme>();
+    for (const s of deckSchemes) map.set(s.id, s);
+    return map;
+  }, [deckSchemes]);
+
   const activeProfile = profiles.find((p) => p.id === activeProfileId) ?? null;
 
   useEffect(() => {
@@ -298,6 +334,22 @@ export function AppStoreProvider({
   }, [ready, insigniaSchemes]);
 
   useEffect(() => {
+    if (!ready) return;
+    const valid = new Set(deckSchemes.map((s) => s.id));
+    setProfiles((list) => {
+      let changed = false;
+      const next = list.map((p) => {
+        if (p.deckSchemeId && !valid.has(p.deckSchemeId)) {
+          changed = true;
+          return { ...p, deckSchemeId: null };
+        }
+        return p;
+      });
+      return changed ? next : list;
+    });
+  }, [ready, deckSchemes]);
+
+  useEffect(() => {
     let cancelled = false;
 
     async function boot(): Promise<void> {
@@ -312,6 +364,8 @@ export function AppStoreProvider({
       let nextCircuitSchemes = state.circuitSchemes;
       let nextInsignias = state.insignias;
       let nextInsigniaSchemes = state.insigniaSchemes;
+      let nextDecks = state.decks;
+      let nextDeckSchemes = state.deckSchemes;
       let nextProfessionOverrides = state.professionOverrides;
       let nextCustomProfessions = state.customProfessions;
       let nextCompareIds = state.compareIds;
@@ -332,6 +386,8 @@ export function AppStoreProvider({
             nextCircuitSchemes = [];
             nextInsignias = [];
             nextInsigniaSchemes = [];
+            nextDecks = [];
+            nextDeckSchemes = [];
             nextProfessionOverrides = [];
             nextCustomProfessions = [];
             nextCompareIds = [];
@@ -359,6 +415,8 @@ export function AppStoreProvider({
             new Set(nextCircuitSchemes.map((s) => s.id)),
             new Set(nextInsignias.map((p) => p.id)),
             new Set(nextInsigniaSchemes.map((s) => s.id)),
+            new Set(nextDecks.map((p) => p.id)),
+            new Set(nextDeckSchemes.map((s) => s.id)),
           );
 
           if (imported.equipmentToAdd.length) {
@@ -395,6 +453,15 @@ export function AppStoreProvider({
             nextInsigniaSchemes = [
               ...imported.insigniaSchemesToAdd,
               ...nextInsigniaSchemes,
+            ];
+          }
+          if (imported.decksToAdd.length) {
+            nextDecks = [...imported.decksToAdd, ...nextDecks];
+          }
+          if (imported.deckSchemesToAdd.length) {
+            nextDeckSchemes = [
+              ...imported.deckSchemesToAdd,
+              ...nextDeckSchemes,
             ];
           }
 
@@ -444,6 +511,8 @@ export function AppStoreProvider({
       setCircuitSchemes(nextCircuitSchemes);
       setInsignias(nextInsignias);
       setInsigniaSchemes(nextInsigniaSchemes);
+      setDecks(nextDecks);
+      setDeckSchemes(nextDeckSchemes);
       setProfessionOverrides(nextProfessionOverrides);
       setCustomProfessions(nextCustomProfessions);
       setCompareIds(nextCompareIds);
@@ -470,6 +539,8 @@ export function AppStoreProvider({
       circuitSchemes,
       insignias,
       insigniaSchemes,
+      decks,
+      deckSchemes,
       professionOverrides,
       customProfessions,
       compareIds,
@@ -486,6 +557,8 @@ export function AppStoreProvider({
     circuitSchemes,
     insignias,
     insigniaSchemes,
+    decks,
+    deckSchemes,
     professionOverrides,
     customProfessions,
     compareIds,
@@ -531,6 +604,7 @@ export function AppStoreProvider({
       schemeOverride?: CircuitScheme | null,
       insigniaOverride?: InsigniaScheme | null,
       extraProfessionOverrides?: ProfessionOverride[],
+      deckOverride?: DeckScheme | null,
     ) => {
       const bags: StatBag[] = collectSourceBags(profile);
       const scheme =
@@ -560,6 +634,21 @@ export function AppStoreProvider({
           insigniaSchemeContribution(
             insigniaScheme,
             insigniasById,
+            profile.element ?? "all",
+          ).bag,
+        );
+      }
+      const deckScheme =
+        deckOverride !== undefined
+          ? deckOverride
+          : profile.deckSchemeId
+            ? (deckSchemesById.get(profile.deckSchemeId) ?? null)
+            : null;
+      if (deckScheme) {
+        bags.push(
+          deckSchemeContribution(
+            deckScheme,
+            decksById,
             profile.element ?? "all",
           ).bag,
         );
@@ -596,6 +685,8 @@ export function AppStoreProvider({
       circuitsById,
       insigniaSchemesById,
       insigniasById,
+      deckSchemesById,
+      decksById,
       professionOverrides,
       customProfessions,
     ],
@@ -629,6 +720,18 @@ export function AppStoreProvider({
           );
         }
       }
+      if (profile.deckSchemeId) {
+        const scheme = deckSchemesById.get(profile.deckSchemeId);
+        if (scheme) {
+          bags.push(
+            deckSchemeContribution(
+              scheme,
+              decksById,
+              profile.element ?? "all",
+            ).bag,
+          );
+        }
+      }
       return resolveEffectiveStats(profile.base, bags, profile.damageType);
     },
     [
@@ -637,6 +740,8 @@ export function AppStoreProvider({
       circuitsById,
       insigniaSchemesById,
       insigniasById,
+      deckSchemesById,
+      decksById,
     ],
   );
 
@@ -722,6 +827,8 @@ export function AppStoreProvider({
           schemesById,
           insigniasById,
           insigniaSchemesById,
+          decksById,
+          deckSchemesById,
         );
         const fragment = await encodeShareFragment(payload);
         const url = buildShareUrl(fragment);
@@ -742,6 +849,8 @@ export function AppStoreProvider({
       schemesById,
       insigniasById,
       insigniaSchemesById,
+      decksById,
+      deckSchemesById,
       copyShareUrl,
     ],
   );
@@ -850,6 +959,33 @@ export function AppStoreProvider({
     [activeProfile, profiles.length, m],
   );
 
+  const applyImportedDeckScheme = useCallback(
+    (bundle: DeckSchemeBundle): Profile => {
+      const now = new Date().toISOString();
+      setDecks((list) => [...bundle.pieces, ...list]);
+      setDeckSchemes((list) => [bundle.scheme, ...list]);
+      if (activeProfile) {
+        const next: Profile = {
+          ...activeProfile,
+          deckSchemeId: bundle.scheme.id,
+          updatedAt: now,
+        };
+        setProfiles((list) =>
+          list.map((p) => (p.id === activeProfile.id ? next : p)),
+        );
+        return next;
+      }
+      const created: Profile = {
+        ...blankProfile(m.defaultProfileName(profiles.length + 1)),
+        deckSchemeId: bundle.scheme.id,
+      };
+      setProfiles((list) => [created, ...list]);
+      setActiveProfileId(created.id);
+      return created;
+    },
+    [activeProfile, profiles.length, m],
+  );
+
   const openProfileWithAppliedScheme = useCallback(
     (profile: Profile, message: string) => {
       setActiveProfileId(profile.id);
@@ -903,6 +1039,25 @@ export function AppStoreProvider({
     ],
   );
 
+  const importDeckSchemeFromCode = useCallback(
+    async (code: string) => {
+      const decoded = await decodeDeckSchemeCode(code);
+      if (!decoded) {
+        throw new Error(m.badDeckCode);
+      }
+      const bundle = finalizeDeckSchemeImport(
+        decoded,
+        deckSchemes.map((s) => s.name),
+      );
+      const profile = applyImportedDeckScheme(bundle);
+      openProfileWithAppliedScheme(
+        profile,
+        m.importedDeck(bundle.scheme.name, profile.name),
+      );
+    },
+    [m, deckSchemes, applyImportedDeckScheme, openProfileWithAppliedScheme],
+  );
+
   const importSchemeOntoActiveProfile = useCallback(
     async (code: string) => {
       const kind = peekSchemeShareKind(code);
@@ -914,9 +1069,18 @@ export function AppStoreProvider({
         await importInsigniaSchemeFromCode(code);
         return;
       }
+      if (kind === "deck") {
+        await importDeckSchemeFromCode(code);
+        return;
+      }
       throw new Error(m.badSchemeCode);
     },
-    [importCircuitSchemeFromCode, importInsigniaSchemeFromCode, m],
+    [
+      importCircuitSchemeFromCode,
+      importInsigniaSchemeFromCode,
+      importDeckSchemeFromCode,
+      m,
+    ],
   );
 
   const exportActiveProfileCircuitScheme = useCallback(async (): Promise<string> => {
@@ -938,6 +1102,18 @@ export function AppStoreProvider({
       return encodeInsigniaSchemeCode(scheme, insigniasById);
     },
     [activeProfile, insigniaSchemesById, insigniasById, m],
+  );
+
+  const exportActiveProfileDeckScheme = useCallback(
+    async (): Promise<string> => {
+      if (!activeProfile?.deckSchemeId) {
+        throw new Error(m.noDeckOnProfile);
+      }
+      const scheme = deckSchemesById.get(activeProfile.deckSchemeId);
+      if (!scheme) throw new Error(m.noDeckOnProfile);
+      return encodeDeckSchemeCode(scheme, decksById);
+    },
+    [activeProfile, deckSchemesById, decksById, m],
   );
 
   const toggleCompare = useCallback((id: string) => {
@@ -981,6 +1157,8 @@ export function AppStoreProvider({
             circuitSchemes,
             insignias,
             insigniaSchemes,
+            decks,
+            deckSchemes,
             professionOverrides,
             customProfessions,
             compareIds,
@@ -1008,6 +1186,8 @@ export function AppStoreProvider({
     circuitSchemes,
     insignias,
     insigniaSchemes,
+    decks,
+    deckSchemes,
     professionOverrides,
     customProfessions,
     compareIds,
@@ -1025,6 +1205,8 @@ export function AppStoreProvider({
         circuitSchemes?: CircuitScheme[];
         insignias?: InsigniaPiece[];
         insigniaSchemes?: InsigniaScheme[];
+        decks?: DeckPiece[];
+        deckSchemes?: DeckScheme[];
         professionOverrides?: ProfessionOverride[];
         customProfessions?: ProfessionDef[];
         hiddenEquipmentIds?: string[];
@@ -1040,6 +1222,20 @@ export function AppStoreProvider({
       if (Array.isArray(data.insignias)) setInsignias(data.insignias);
       if (Array.isArray(data.insigniaSchemes))
         setInsigniaSchemes(data.insigniaSchemes);
+      if (Array.isArray(data.decks)) {
+        setDecks(
+          data.decks
+            .map(normalizeDeckPiece)
+            .filter((x): x is DeckPiece => x !== null),
+        );
+      }
+      if (Array.isArray(data.deckSchemes)) {
+        setDeckSchemes(
+          data.deckSchemes
+            .map(normalizeDeckScheme)
+            .filter((x): x is DeckScheme => x !== null),
+        );
+      }
       if (Array.isArray(data.professionOverrides)) {
         setProfessionOverrides(
           data.professionOverrides
@@ -1139,6 +1335,10 @@ export function AppStoreProvider({
     setInsignias,
     insigniaSchemes,
     setInsigniaSchemes,
+    decks,
+    setDecks,
+    deckSchemes,
+    setDeckSchemes,
     professionOverrides,
     setProfessionOverrides,
     customProfessions,
@@ -1155,6 +1355,8 @@ export function AppStoreProvider({
     schemesById,
     insigniasById,
     insigniaSchemesById,
+    decksById,
+    deckSchemesById,
     activeProfile,
 
     editorPanelRef,
@@ -1175,13 +1377,16 @@ export function AppStoreProvider({
     shareSelectedProfilesStats,
     exportActiveProfileCircuitScheme,
     exportActiveProfileInsigniaScheme,
+    exportActiveProfileDeckScheme,
     importCircuitSchemeFromCode,
     importInsigniaSchemeFromCode,
+    importDeckSchemeFromCode,
     importSchemeOntoActiveProfile,
     deleteCustomProfession,
 
     applyImportedCircuitScheme,
     applyImportedInsigniaScheme,
+    applyImportedDeckScheme,
     exportAll,
     importAll,
 

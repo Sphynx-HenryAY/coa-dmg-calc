@@ -37,6 +37,10 @@ import {
   schemeContribution as insigniaSchemeContribution,
 } from "../lib/insignia";
 import {
+  equippedCount as deckEquippedCount,
+  schemeContribution as deckSchemeContribution,
+} from "../lib/deck";
+import {
   circuitElementLabel,
   insigniaRarityLabel,
   professionNameLabel,
@@ -57,6 +61,7 @@ const BASE_FIELDS: Array<{ key: keyof CombatStats; step?: string }> = [
   { key: "resonance", step: "0.1" },
   { key: "damageBoost", step: "0.1" },
   { key: "circuitBoost", step: "0.1" },
+  { key: "petDamage", step: "0.1" },
   { key: "allElementDamage", step: "0.1" },
   { key: "additionalDamage", step: "0.1" },
   { key: "statusDamage", step: "0.1" },
@@ -117,7 +122,11 @@ export function ProfilesTab() {
     shareSelectedProfilesStats,
     exportActiveProfileCircuitScheme,
     exportActiveProfileInsigniaScheme,
+    exportActiveProfileDeckScheme,
     importSchemeOntoActiveProfile,
+    deckSchemes,
+    deckSchemesById,
+    decksById,
     editorPanelRef,
   } = useAppStore();
 
@@ -152,10 +161,21 @@ export function ProfilesTab() {
   const activeInsigniaLines = activeInsigniaContrib
     ? insigniaContributionLines(activeInsigniaContrib)
     : null;
+  const activeDeckScheme = activeProfile?.deckSchemeId
+    ? deckSchemesById.get(activeProfile.deckSchemeId)
+    : undefined;
+  const activeDeckContrib = activeDeckScheme
+    ? deckSchemeContribution(
+        activeDeckScheme,
+        decksById,
+        activeProfile?.element ?? "all",
+      )
+    : null;
   const activeSchemeBonuses = bagToStatBonuses(
     mergeStatBags([
       ...(activeCircuitContrib ? [activeCircuitContrib.bag] : []),
       ...(activeInsigniaContrib ? [activeInsigniaContrib.bag] : []),
+      ...(activeDeckContrib ? [activeDeckContrib.bag] : []),
     ]),
     activeProfile?.damageType ?? "magic",
   );
@@ -578,6 +598,24 @@ export function ProfilesTab() {
                   ))}
                 </select>
               </label>
+              <label>
+                {m.deckScheme}
+                <select
+                  value={activeProfile.deckSchemeId ?? ""}
+                  onChange={(e) =>
+                    updateProfile(activeProfile.id, {
+                      deckSchemeId: e.target.value || null,
+                    })
+                  }
+                >
+                  <option value="">{m.noDeckScheme}</option>
+                  {deckSchemes.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {m.schemeCount(s.name, deckEquippedCount(s))}
+                    </option>
+                  ))}
+                </select>
+              </label>
             </div>
 
             <ProfileSchemeShareBox
@@ -585,6 +623,8 @@ export function ProfilesTab() {
               canExportInsignia={!!activeProfile.insigniaSchemeId}
               onExportCircuit={exportActiveProfileCircuitScheme}
               onExportInsignia={exportActiveProfileInsigniaScheme}
+              canExportDeck={!!activeProfile.deckSchemeId}
+              onExportDeck={exportActiveProfileDeckScheme}
               onImport={importSchemeOntoActiveProfile}
               onStatus={setStatus}
             />

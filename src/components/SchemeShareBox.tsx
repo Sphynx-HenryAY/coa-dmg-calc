@@ -22,7 +22,11 @@ export function SchemeShareBox({
 }: SchemeShareBoxProps) {
   const { m } = useI18n();
   const kindWord =
-    kind === "circuit" ? m.circuitSchemeWord : m.insigniaSchemeWord;
+    kind === "circuit"
+      ? m.circuitSchemeWord
+      : kind === "deck"
+        ? m.deckSchemeWord
+        : m.insigniaSchemeWord;
   const [draft, setDraft] = useState("");
   const [lastExported, setLastExported] = useState("");
   const [busy, setBusy] = useState<"export" | "import" | null>(null);
@@ -62,7 +66,11 @@ export function SchemeShareBox({
     const found = peekSchemeShareKind(code);
     if (found && found !== kind) {
       onStatus(
-        found === "circuit" ? m.circuitCodeWrongTab : m.insigniaCodeWrongTab,
+        found === "circuit"
+          ? m.circuitCodeWrongTab
+          : found === "deck"
+            ? m.deckCodeWrongTab
+            : m.insigniaCodeWrongTab,
       );
       return;
     }
@@ -150,25 +158,29 @@ type ProfileSchemeShareBoxProps = {
   canExportInsignia: boolean;
   onExportCircuit: () => Promise<string>;
   onExportInsignia: () => Promise<string>;
+  canExportDeck?: boolean;
+  onExportDeck?: () => Promise<string>;
   onImport: (code: string) => Promise<void>;
   onStatus: (msg: string) => void;
 };
 
-/** Import / export circuit + insignia schemes onto the current character profile. */
+/** Import / export circuit + insignia + deck schemes onto the current character profile. */
 export function ProfileSchemeShareBox({
   canExportCircuit,
   canExportInsignia,
   onExportCircuit,
   onExportInsignia,
+  canExportDeck = false,
+  onExportDeck,
   onImport,
   onStatus,
 }: ProfileSchemeShareBoxProps) {
   const { m } = useI18n();
   const [draft, setDraft] = useState("");
   const [lastExported, setLastExported] = useState("");
-  const [busy, setBusy] = useState<"circuit" | "insignia" | "import" | null>(
-    null,
-  );
+  const [busy, setBusy] = useState<
+    "circuit" | "insignia" | "deck" | "import" | null
+  >(null);
 
   async function copyText(text: string): Promise<boolean> {
     try {
@@ -180,7 +192,7 @@ export function ProfileSchemeShareBox({
   }
 
   async function handleExport(
-    kind: "circuit" | "insignia",
+    kind: "circuit" | "insignia" | "deck",
     run: () => Promise<string>,
   ): Promise<void> {
     if (busy) return;
@@ -191,7 +203,11 @@ export function ProfileSchemeShareBox({
       setDraft(code);
       const copied = await copyText(code);
       const label =
-        kind === "circuit" ? m.circuitSchemeWord : m.insigniaSchemeWord;
+        kind === "circuit"
+          ? m.circuitSchemeWord
+          : kind === "deck"
+            ? m.deckSchemeWord
+            : m.insigniaSchemeWord;
       onStatus(
         copied
           ? m.copiedProfileKind(label, code.length)
@@ -254,6 +270,17 @@ export function ProfileSchemeShareBox({
           >
             {busy === "insignia" ? m.exporting : m.exportInsignia}
           </button>
+          {onExportDeck ? (
+            <button
+              type="button"
+              className="secondary"
+              disabled={!canExportDeck || busy !== null}
+              title={canExportDeck ? m.exportDeckTitle : m.noDeckOnThis}
+              onClick={() => void handleExport("deck", onExportDeck)}
+            >
+              {busy === "deck" ? m.exporting : m.exportDeck}
+            </button>
+          ) : null}
         </div>
       </div>
       <p className="muted small">{m.profileShareHint}</p>

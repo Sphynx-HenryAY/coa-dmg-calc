@@ -11,6 +11,7 @@
     "resonance": "Resonance",
     "damageBoost": "DMG Boost",
     "circuitBoost": "Circuit Boost",
+    "petDamage": "Pet Damage",
     "allElementDamage": "All Elem. DMG",
     "additionalDamage": "Bonus DMG",
     "statusDamage": "Status",
@@ -56,6 +57,7 @@
     "skillDamage": "Skill DMG",
     "attack": "ATK",
     "circuitBoost": "Circuit Boost",
+    "petDamage": "Pet Damage",
     "allElementDamage": "All Elem. DMG",
     "elementalPower": "Elem. Power",
     "damageBoost": "DMG Boost",
@@ -93,7 +95,8 @@
     "str": "STR",
     "int": "INT",
     "otherworld": "Otherworld DMG",
-    "resonanceCharge": "Resonance Charge"
+    "resonanceCharge": "Resonance Charge",
+    "petDamage": "Pet Damage"
   },
   "slot": {
     "頭": "Head",
@@ -136,6 +139,7 @@
     "resonance": "Resonance",
     "damageBoost": "DMG Boost",
     "circuitBoost": "Circuit Boost",
+    "petDamage": "Pet Damage",
     "allElementDamage": "All Elem. DMG",
     "additionalDamage": "Bonus DMG",
     "statusDamage": "Status",
@@ -1233,7 +1237,72 @@
     "langPlaceholdersHint": "Keep the {bracketed} words; they are filled in at runtime.",
     "langUntranslatedNote": "Empty fields use the base language.",
     "langImportApply": "Import & edit",
-    "langEdit": "Edit"
+    "langEdit": "Edit",
+    "tabDecks": "Decks",
+    "tabDecksShort": "Decks",
+    "deckScheme": "Deck Scheme",
+    "noDeckScheme": "None",
+    "deckSchemeWord": "Deck Scheme",
+    "deckLib": "Deck Library",
+    "allDecks": "All Decks",
+    "noDecks": "No decks yet — add your first card.",
+    "searchDecks": "Search decks",
+    "deckSchemes": "Deck Schemes",
+    "deckSchemeHint": "Build a 4-card deck; equip it on a profile to add its bonuses.",
+    "noDeckSchemes": "No deck schemes yet.",
+    "deckGainTitle": "Deck Gains",
+    "deckGainHintWith": "Damage gain from the equipped deck scheme.",
+    "deckGainHintEmpty": "Equip or pick a deck scheme to see gains.",
+    "editDeck": "Edit Deck",
+    "addDeck": "Add Deck",
+    "deckFormHint": "A deck card provides stat bonuses. Add up to 6 effects.",
+    "autoNameDeckPh": "Auto-named from card name",
+    "deckAffixHint": "Each card's effects are added when the deck is equipped.",
+    "previewNoDeck": "No deck equipped",
+    "previewDeckGain": "With deck",
+    "noDeckDamage": "Deck adds no damage stats for this profile.",
+    "addedDeckScheme": "Deck scheme added",
+    "copiedDeckScheme": "Deck scheme copied",
+    "deletedDeckScheme": "Deck scheme deleted",
+    "updatedDeck": {
+      "tpl": "Deck '{name}' updated",
+      "args": [
+        "name"
+      ]
+    },
+    "addedDeck": {
+      "tpl": "Deck '{name}' added",
+      "args": [
+        "name"
+      ]
+    },
+    "deletedDeck": {
+      "tpl": "Deck '{name}' deleted",
+      "args": [
+        "name"
+      ]
+    },
+    "copiedDeck": {
+      "tpl": "Deck '{name}' copied",
+      "args": [
+        "name"
+      ]
+    },
+    "pickProfileDeckCompare": "Pick a profile to compare deck gains",
+    "addDeckToCompare": "Add a deck card to the library to compare gains",
+    "deckCodeWrongTab": "This deck code belongs to the Deck tab.",
+    "exportDeck": "Export Deck",
+    "exportDeckTitle": "Copy the active deck scheme as a share code",
+    "noDeckOnThis": "No deck scheme on this profile",
+    "noDeckOnProfile": "No deck scheme on the active profile",
+    "importedDeck": {
+      "tpl": "Imported deck scheme '{name}' onto profile '{profile}'",
+      "args": [
+        "name",
+        "profile"
+      ]
+    },
+    "badDeckCode": "Invalid deck scheme code"
   },
   "meta": {
     "htmlLang": "en",

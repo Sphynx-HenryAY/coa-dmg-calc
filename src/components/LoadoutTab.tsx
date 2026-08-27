@@ -80,6 +80,7 @@ export interface LoadoutConfig<
   namePlaceholder: string;
   libTitle: string;
   noLibMsg: string;
+  libraryTitle?: string;
   searchPlaceholder: string;
   schemesTitle: string;
   schemesHint: string;
@@ -507,6 +508,7 @@ export function LoadoutTab<
                 emptyHint={config.emptyHint}
                 gainRowMeta={config.gainRowMeta}
                 libraryGain={config.libraryGain}
+                libraryTitle={config.libraryTitle}
               />
             ) : (
               <>{config.gainFallback?.(activeProfile, null)}</>
@@ -808,6 +810,7 @@ function GainPanel<
   emptyHint,
   gainRowMeta,
   libraryGain,
+  libraryTitle,
 }: {
   comparison: Comp;
   piecesById: Map<string, P>;
@@ -819,6 +822,7 @@ function GainPanel<
   gainHintEmpty: string;
   equippedHeader?: string;
   emptyHint?: string;
+  libraryTitle?: string;
   gainRowMeta: (
     row: LoadoutSlotGain<P, S>,
   ) => { pillClass: string; pillLabel: string; name: string };
@@ -932,7 +936,7 @@ function GainPanel<
       {libraryGain && libraryRows.length > 0 ? (
         <>
           <h3 className="section-title">
-            {m.allInsignias}{" "}
+            {libraryTitle ?? m.allInsignias}{" "}
             <span className="muted small">({libraryRows.length})</span>
           </h3>
           <p className="muted small">{m.libraryGainHint}</p>

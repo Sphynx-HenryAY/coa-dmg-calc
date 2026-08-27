@@ -25,6 +25,7 @@ export function CompareTab() {
     customProfessions,
     schemesById,
     insigniaSchemesById,
+    deckSchemesById,
     activeProfile,
     profileResult,
     toggleCompare,
@@ -314,6 +315,19 @@ export function CompareTab() {
                 {compareResults.map(({ profile }) => {
                   const scheme = profile.insigniaSchemeId
                     ? insigniaSchemesById.get(profile.insigniaSchemeId)
+                    : undefined;
+                  return (
+                    <td key={profile.id}>
+                      {scheme ? scheme.name : "—"}
+                    </td>
+                  );
+                })}
+              </tr>
+              <tr>
+                <td>{m.deckScheme}</td>
+                {compareResults.map(({ profile }) => {
+                  const scheme = profile.deckSchemeId
+                    ? deckSchemesById.get(profile.deckSchemeId)
                     : undefined;
                   return (
                     <td key={profile.id}>

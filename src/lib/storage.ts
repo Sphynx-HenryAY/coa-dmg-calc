@@ -2,6 +2,8 @@ import type {
   CatalogItem,
   CircuitPiece,
   CircuitScheme,
+  DeckPiece,
+  DeckScheme,
   Equipment,
   InsigniaPiece,
   InsigniaScheme,
@@ -18,6 +20,7 @@ import {
   normalizeInsigniaPiece,
   normalizeInsigniaScheme,
 } from "./insignia";
+import { normalizeDeckPiece, normalizeDeckScheme } from "./deck";
 import {
   normalizeCustomProfession,
   normalizeProfessionOverride,
@@ -33,6 +36,8 @@ export type PersistedState = {
   circuitSchemes: CircuitScheme[];
   insignias: InsigniaPiece[];
   insigniaSchemes: InsigniaScheme[];
+  decks: DeckPiece[];
+  deckSchemes: DeckScheme[];
   /** Local edits to built-in profession cycles. */
   professionOverrides: ProfessionOverride[];
   /** User-created professions (not in the built-in catalog). */
@@ -62,6 +67,8 @@ function emptyPersistedState(): PersistedState {
     circuitSchemes: [],
     insignias: [],
     insigniaSchemes: [],
+    decks: [],
+    deckSchemes: [],
     professionOverrides: [],
     customProfessions: [],
     hiddenEquipmentIds: [],
@@ -77,6 +84,7 @@ function normalizeStoredProfile(raw: Profile): Profile {
     element: raw.element ?? "all",
     circuitSchemeId: raw.circuitSchemeId ?? null,
     insigniaSchemeId: raw.insigniaSchemeId ?? null,
+    deckSchemeId: raw.deckSchemeId ?? null,
     professionId: raw.professionId ?? null,
     observedTrainingDamage: parseObservedDamage(raw.observedTrainingDamage),
   };
@@ -115,6 +123,12 @@ export function loadState(): PersistedState {
       insigniaSchemes: (parsed.insigniaSchemes ?? [])
         .map(normalizeInsigniaScheme)
         .filter((x): x is InsigniaScheme => x !== null),
+      decks: (parsed.decks ?? [])
+        .map(normalizeDeckPiece)
+        .filter((x): x is DeckPiece => x !== null),
+      deckSchemes: (parsed.deckSchemes ?? [])
+        .map(normalizeDeckScheme)
+        .filter((x): x is DeckScheme => x !== null),
       professionOverrides: (parsed.professionOverrides ?? [])
         .map(normalizeProfessionOverride)
         .filter((x): x is ProfessionOverride => x !== null),
@@ -142,6 +156,8 @@ export function saveState(state: PersistedState): void {
       circuitSchemes: state.circuitSchemes,
       insignias: state.insignias,
       insigniaSchemes: state.insigniaSchemes,
+      decks: state.decks,
+      deckSchemes: state.deckSchemes,
       professionOverrides: state.professionOverrides,
       customProfessions: state.customProfessions,
       hiddenEquipmentIds: state.hiddenEquipmentIds,
@@ -178,6 +194,7 @@ export function blankProfile(name = "新配置"): Profile {
     activeSourceIds: [],
     circuitSchemeId: null,
     insigniaSchemeId: null,
+    deckSchemeId: null,
     professionId: null,
     observedTrainingDamage: null,
     createdAt: now,

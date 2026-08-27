@@ -11,6 +11,7 @@
     "resonance": "共鳴",
     "damageBoost": "提傷",
     "circuitBoost": "迴路增傷",
+    "petDamage": "寵物增傷",
     "allElementDamage": "全屬性傷害",
     "additionalDamage": "附加傷害",
     "statusDamage": "異常",
@@ -56,6 +57,7 @@
     "skillDamage": "技能傷害",
     "attack": "攻擊力",
     "circuitBoost": "迴路增傷",
+    "petDamage": "寵物增傷",
     "allElementDamage": "全屬性傷害",
     "elementalPower": "全屬性強化",
     "damageBoost": "傷害提升",
@@ -93,7 +95,8 @@
     "str": "力量",
     "int": "智力",
     "otherworld": "異界傷害",
-    "resonanceCharge": "共鳴充能"
+    "resonanceCharge": "共鳴充能",
+    "petDamage": "寵物增傷"
   },
   "slot": {},
   "catalogStat": {
@@ -109,6 +112,7 @@
     "resonance": "共鳴",
     "damageBoost": "提傷",
     "circuitBoost": "迴路增傷",
+    "petDamage": "寵物增傷",
     "allElementDamage": "全屬性傷害",
     "additionalDamage": "附加傷害",
     "statusDamage": "異常",
@@ -1206,7 +1210,72 @@
     "langPlaceholdersHint": "保留 {括號} 中的字詞，它們會在執行時填入。",
     "langUntranslatedNote": "空白欄位會使用基準語言。",
     "langImportApply": "匯入並編輯",
-    "langEdit": "編輯"
+    "langEdit": "編輯",
+    "tabDecks": "牌組",
+    "tabDecksShort": "牌組",
+    "deckScheme": "牌組方案",
+    "noDeckScheme": "無",
+    "deckSchemeWord": "牌組方案",
+    "deckLib": "牌組庫",
+    "allDecks": "全部牌組",
+    "noDecks": "尚無牌組 — 新增第一張卡。",
+    "searchDecks": "搜尋牌組",
+    "deckSchemes": "牌組方案",
+    "deckSchemeHint": "組出 4 張卡的牌組，並套用到配置以獲得其加成。",
+    "noDeckSchemes": "尚無牌組方案。",
+    "deckGainTitle": "牌組增益",
+    "deckGainHintWith": "目前套用牌組方案帶來的傷害增益。",
+    "deckGainHintEmpty": "套用或選擇牌組方案以查看增益。",
+    "editDeck": "編輯牌組",
+    "addDeck": "新增牌組",
+    "deckFormHint": "每張牌組卡提供屬性加成，最多 6 個效果。",
+    "autoNameDeckPh": "依卡名自動命名",
+    "deckAffixHint": "牌組套用時，每張卡的效果都會加入。",
+    "previewNoDeck": "未套用牌組",
+    "previewDeckGain": "套用牌組",
+    "noDeckDamage": "此配置下牌組未提供傷害屬性。",
+    "addedDeckScheme": "已新增牌組方案",
+    "copiedDeckScheme": "已複製牌組方案",
+    "deletedDeckScheme": "已刪除牌組方案",
+    "updatedDeck": {
+      "tpl": "牌組「{name}」已更新",
+      "args": [
+        "name"
+      ]
+    },
+    "addedDeck": {
+      "tpl": "已新增牌組「{name}」",
+      "args": [
+        "name"
+      ]
+    },
+    "deletedDeck": {
+      "tpl": "已刪除牌組「{name}」",
+      "args": [
+        "name"
+      ]
+    },
+    "copiedDeck": {
+      "tpl": "已複製牌組「{name}」",
+      "args": [
+        "name"
+      ]
+    },
+    "pickProfileDeckCompare": "選擇配置以比較牌組增益",
+    "addDeckToCompare": "在庫中新增牌組卡以比較增益",
+    "deckCodeWrongTab": "此牌組代碼屬於牌組分頁。",
+    "exportDeck": "匯出牌組",
+    "exportDeckTitle": "將目前牌組方案複製為分享代碼",
+    "noDeckOnThis": "此配置無牌組方案",
+    "noDeckOnProfile": "目前配置無牌組方案",
+    "importedDeck": {
+      "tpl": "已將牌組方案「{name}」套用到配置「{profile}」",
+      "args": [
+        "name",
+        "profile"
+      ]
+    },
+    "badDeckCode": "無效的牌組方案代碼"
   },
   "meta": {
     "htmlLang": "zh-Hant",
