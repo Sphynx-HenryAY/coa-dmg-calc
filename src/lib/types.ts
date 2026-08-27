@@ -223,8 +223,6 @@ export type DeckSlotId = "1" | "2" | "3" | "4";
 export type DeckPiece = {
   id: string;
   name: string;
-  /** Which of the 4 deck positions this card may occupy. */
-  slots: DeckSlotId[];
   affixes: InsigniaAffix[];
   note: string;
   createdAt: string;
@@ -268,7 +266,8 @@ export type InsigniaStatKey =
   | "str"
   | "int"
   | "otherworld"
-  | "resonanceCharge";
+  | "resonanceCharge"
+  | "petDamage";
 
 export type InsigniaAffix = {
   stat: InsigniaStatKey;
@@ -367,6 +366,7 @@ export type DamageResult = {
     skillResonance: number;
     damageBoost: number;
     circuit: number;
+    pet: number;
     allElement: number;
     additional: number;
     statusBoss: number;

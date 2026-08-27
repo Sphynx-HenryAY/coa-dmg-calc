@@ -1,0 +1,1280 @@
+{
+  "statLabels": {
+    "attack": "攻击",
+    "physicalAttack": "物攻",
+    "magicAttack": "魔攻",
+    "defenseBreak": "破防",
+    "critRate": "暴率",
+    "critDamage": "爆伤",
+    "elementalPower": "属强",
+    "skillDamage": "技伤",
+    "resonance": "共鸣",
+    "damageBoost": "提伤",
+    "circuitBoost": "回路增伤",
+    "allElementDamage": "全属性伤害",
+    "additionalDamage": "附加伤害",
+    "statusDamage": "异常",
+    "bossDamage": "头目",
+    "penetration": "穿透",
+    "trainingCorrection": "训练场修正",
+    "skillMultiplier": "技能倍率",
+    "attackPercent": "攻击%",
+    "normalAttackDamage": "普攻伤害"
+  },
+  "circuitKind": {
+    "time": "时间",
+    "nether": "冥灯",
+    "star": "星轨",
+    "key": "辉钥"
+  },
+  "circuitElement": {
+    "ice": "冰",
+    "fire": "火",
+    "electric": "电",
+    "dark": "暗",
+    "all": "全部"
+  },
+  "circuitStat": {
+    "str": "力量",
+    "int": "智力",
+    "vit": "体质",
+    "agi": "敏捷",
+    "spr": "精神",
+    "hp": "生命值",
+    "pAtk": "物攻",
+    "mAtk": "魔攻",
+    "pDef": "物防",
+    "mDef": "魔防",
+    "critRate": "暴率",
+    "critDamage": "暴伤",
+    "atkSpeed": "攻速",
+    "cooldown": "冷却",
+    "ice": "冰属",
+    "fire": "火属",
+    "electric": "电属",
+    "dark": "暗属",
+    "skillDamage": "技能伤害",
+    "attack": "攻击力",
+    "circuitBoost": "回路增伤",
+    "allElementDamage": "全属性伤害",
+    "elementalPower": "全属性强化",
+    "damageBoost": "伤害提升",
+    "bossDamage": "头目伤害",
+    "statusDamage": "异常伤害",
+    "strInt": "力量智力",
+    "agiSpr": "敏捷精神"
+  },
+  "insigniaRarity": {
+    "epic": "史诗",
+    "rare": "稀有"
+  },
+  "insigniaStat": {
+    "critRate": "暴率",
+    "critDamage": "暴伤",
+    "skillDamage": "技能伤害",
+    "normalAttack": "普攻伤害",
+    "damageBoost": "伤害提升",
+    "bossDamage": "头目伤害",
+    "statusDamage": "异常伤害",
+    "elementalPower": "全属性",
+    "ice": "冰属",
+    "fire": "火属",
+    "electric": "电属",
+    "dark": "暗属",
+    "attackPercent": "物攻%",
+    "attackPercentMagic": "魔攻%",
+    "attackPercentBoth": "物攻%+魔攻%",
+    "atkSpeed": "攻速",
+    "cooldown": "冷却",
+    "hp": "生命值",
+    "hpPercent": "生命%",
+    "pDef": "物防%",
+    "mDef": "魔防%",
+    "str": "力量",
+    "int": "智力",
+    "otherworld": "异界伤害",
+    "resonanceCharge": "共鸣充能"
+  },
+  "slot": {},
+  "catalogStat": {
+    "attack": "攻击力",
+    "physicalAttack": "物攻",
+    "magicAttack": "魔攻",
+    "defenseBreak": "破防",
+    "critRate": "暴率",
+    "critRateMagic": "魔法暴击率",
+    "critDamage": "爆伤",
+    "elementalPower": "属强",
+    "skillDamage": "技伤",
+    "resonance": "共鸣",
+    "damageBoost": "提伤",
+    "circuitBoost": "回路增伤",
+    "allElementDamage": "全属性伤害",
+    "additionalDamage": "附加伤害",
+    "statusDamage": "异常",
+    "bossDamage": "头目",
+    "penetration": "穿透",
+    "penetrationMagic": "魔法穿透",
+    "attackPercent": "物理攻击力",
+    "attackPercentMagic": "魔法攻击力",
+    "intPercent": "智力",
+    "strPercent": "力量",
+    "normalAttackDamage": "普攻伤害",
+    "trainingCorrection": "训练场修正",
+    "skillMultiplier": "技能倍率",
+    "attackSpeed": "攻速",
+    "cooldownSpeed": "冷却速度",
+    "resonanceCharge": "共鸣充能效率"
+  },
+  "professionFamily": {
+    "sword": "剑士",
+    "gunner": "火枪手",
+    "mage": "魔导士",
+    "puppet": "魔偶师",
+    "fighter": "格斗家",
+    "side": "外传"
+  },
+  "professionName": {
+    "berserker": "狂战士",
+    "mageblade": "魔剑士",
+    "ghostblade": "鬼刃",
+    "bounty": "赏金猎人",
+    "artillerist": "枪炮师",
+    "elementalist": "元素师",
+    "warlock": "诡术师",
+    "magician": "魔术师",
+    "scythe": "镰卫",
+    "puppeteer": "剑侍",
+    "cloudheart": "云心",
+    "heartbreaker": "碎心",
+    "espionage": "谍影",
+    "sonic": "音爆",
+    "elsa": "艾尔莎"
+  },
+  "professionNote": {
+    "berserker": "近战技能输出。火属为预设；循环请依自身技能栏校正。",
+    "mageblade": "走魔攻／智力。预设电属，可依技能改冰火。",
+    "ghostblade": "冰火双属近战。寒刃与剑鬼；循环请依自身技能栏校正。",
+    "bounty": "远程射击。属性预设全部；循环请依自身技能栏校正。",
+    "artillerist": "远程技能砲击。火属为预设。",
+    "elementalist": "属性预设「全部」，回路冰火电都会进属强。可改成单一属性对齐技能。",
+    "warlock": "暗属技能。暗属回路／徽记会拉开与其他法系的差距。",
+    "magician": "远程法系，预设电属。",
+    "scythe": "近战技能，预设暗属。",
+    "puppeteer": "人偶连携。属性预设全部。",
+    "cloudheart": "格斗技能输出。",
+    "heartbreaker": "格斗近战。属性预设全部。",
+    "espionage": "四武器循环。预设电属；请用训练场数字校正一套倍率。",
+    "sonic": "外传职业，预设电属。",
+    "elsa": "外传法系。无独立光属，属性预设全部。"
+  },
+  "messages": {
+    "appTitle": "COA 伤害计算机",
+    "appSubtitle": "依 siumai 伤害 分页公式计算；从装备库、道具、回路、徽记与职业循环叠加属性，建立多组 Profile，并用训练场伤害比较职业强度。",
+    "loading": "载入中…",
+    "addProfile": "新增配置",
+    "exportJson": "汇出",
+    "importJson": "汇入",
+    "langZh": "中文",
+    "langEn": "EN",
+    "langAria": "介面语言",
+    "tabsAria": "主要分页",
+    "tabProfiles": "配置 Profile",
+    "tabProfilesShort": "配置",
+    "tabGear": "装备库",
+    "tabGearShort": "装备",
+    "tabItems": "道具 / Buff",
+    "tabItemsShort": "道具",
+    "tabCircuits": "回路配搭",
+    "tabCircuitsShort": "回路",
+    "tabInsignias": "徽记配搭",
+    "tabInsigniasShort": "徽记",
+    "tabCompare": "伤害比较",
+    "tabCompareShort": "比较",
+    "profileList": "配置列表",
+    "shareSelectedFull": {
+      "tpl": "分享选取完整 ({n})",
+      "args": [
+        "n"
+      ]
+    },
+    "shareSelectedStats": {
+      "tpl": "分享选取数值 ({n})",
+      "args": [
+        "n"
+      ]
+    },
+    "shareSelectedFullTitle": "分享已勾选「比较」的配置（含装备/道具）",
+    "shareSelectedStatsTitle": "分享已勾选「比较」的数值属性",
+    "shareMultiHint": "勾选「比较」可多选配置，再用上方按钮一次分享全部选取项。",
+    "noProfiles": "尚无配置，点右上角新增。",
+    "compareSelect": "比较/选取",
+    "compareSelectAria": {
+      "tpl": "比较选取 {name}",
+      "args": [
+        "name"
+      ]
+    },
+    "noNote": "无备注",
+    "finalDamage": "最终伤害",
+    "trainingDamage": "训练场伤害",
+    "trainingNoBoss": {
+      "tpl": "木桩防 {def}，不含头目",
+      "args": [
+        "def"
+      ]
+    },
+    "cycleOn": {
+      "tpl": "{name} 循环 ×{cycle}",
+      "args": [
+        "name",
+        "cycle"
+      ]
+    },
+    "finalDamageBoss": "公式最终伤害（含头目）",
+    "edit": "编辑",
+    "copy": "复制",
+    "delete": "删除",
+    "editAria": {
+      "tpl": "编辑 {name}",
+      "args": [
+        "name"
+      ]
+    },
+    "copyAria": {
+      "tpl": "复制 {name}",
+      "args": [
+        "name"
+      ]
+    },
+    "deleteAria": {
+      "tpl": "删除 {name}",
+      "args": [
+        "name"
+      ]
+    },
+    "editing": {
+      "tpl": "编辑：{name}",
+      "args": [
+        "name"
+      ]
+    },
+    "shareFull": "分享完整",
+    "shareStats": "分享数值",
+    "shareFullTitle": "仅分享目前编辑中的这一份配置（含其装备/道具）",
+    "shareStatsTitle": "仅分享目前编辑中的数值属性",
+    "name": "名称",
+    "note": "备注",
+    "damageType": "伤害类型（影响物/魔暴击、穿透；物理用物攻×力量，魔法用魔攻×智力）",
+    "magic": "魔法",
+    "physical": "物理",
+    "skillElement": "技能属性（决定回路冰/火/电/暗是否计入属强）",
+    "elementAll": "全部（所有属性皆计入）",
+    "circuitScheme": "回路方案",
+    "insigniaScheme": "徽记方案",
+    "noCircuitScheme": "— 未使用回路 —",
+    "noInsigniaScheme": "— 未使用徽记 —",
+    "schemeCount": {
+      "tpl": "{name}（{n}/11）",
+      "args": [
+        "name",
+        "n"
+      ]
+    },
+    "baseStats": "基底数值",
+    "baseStatsHint": "输入栏是未再加选装备/道具前的基底。选了回路或徽记方案后，提升会加在对应数值下方；取消方案即减去。不会改写输入的基底。「攻击」为攻击力，会同时加进物攻与魔攻基础。比率类以百分比显示（例如暴率 50 = 50%）。",
+    "schemeBonus": {
+      "tpl": "方案 {value}",
+      "args": [
+        "value"
+      ]
+    },
+    "schemeProvided": "方案提供，取消后减去",
+    "equipSlots": "装备栏位",
+    "unequipped": "— 未装备 —",
+    "circuitSocket": "回路镶嵌",
+    "insigniaSocket": "徽记镶嵌",
+    "currentScheme": {
+      "tpl": "目前方案：{name}（{n}/11）",
+      "args": [
+        "name",
+        "n"
+      ]
+    },
+    "schemeNoDamage": "此方案尚无计入伤害的属性。",
+    "noCircuitApplied": "尚未套用回路方案。在上方选择方案、贴上分享字串导入，或到「回路配搭」分页套用。",
+    "noInsigniaApplied": "尚未套用徽记方案。在上方选择方案、贴上分享字串导入，或到「徽记配搭」分页套用。",
+    "itemsBuffs": "道具 / Buff",
+    "calcResult": "计算结果",
+    "monsterDef": "怪防",
+    "vsMonster": "对怪有效伤害",
+    "effectiveStats": "有效属性",
+    "formulaZones": "公式乘区",
+    "formulaNote": "最终攻击 = (攻击力 + 物攻或魔攻) × (1 + 力量或智力 + 攻击%)；攻击力同时加进物攻与魔攻基础，物攻／魔攻属性加基础值而非百分比。最终伤害 = (最终攻击+破防) × (暴率×(1+爆伤)+(1−暴率)) × (1+属强/220) × (1+技伤+普攻伤害+共鸣) × (1+提伤) × (1+回路) × (1+全属性伤害) × (1+附加) × (1+异常+头目) × (1+训练场) × 技能倍率 × 职业循环。训练场伤害 = 同上但头目=0，再套木桩防减伤。",
+    "pickProfile": "请选择左侧配置进行编辑。",
+    "monsterTraining": {
+      "tpl": "训练场木桩 ({def})",
+      "args": [
+        "def"
+      ]
+    },
+    "monsterLow": "低防 (5000)",
+    "monsterMid": "中防 (20000)",
+    "monsterHigh": "高防 (60000)",
+    "editGear": "编辑装备",
+    "addGear": "新增装备",
+    "gearStatHint": "属性格式（每行一项，也可用 ; 分隔）：",
+    "gearNamePh": "例如：自订 项链",
+    "slot": "部位",
+    "otherSlot": "其他",
+    "setName": "套装",
+    "setPh": "自订 / 套装名",
+    "statsMultiline": "属性（多行）",
+    "gearStatsPh": "技能伤害 +12%\n全属性强化 +28\n对头目伤害 +11%",
+    "effectsOptional": "特效说明（选填，每行一则）",
+    "effectsPh": "特效文字…",
+    "saveChanges": "储存变更",
+    "cancelEdit": "取消编辑",
+    "batchImport": "批次汇入 / 范本",
+    "gearCsvHint": "CSV 栏位：id,name,slot,set,stats,effects。有 id 且已存在则更新，否则新增。stats 用分号分隔多项属性。",
+    "downloadCsvTemplate": "下载 CSV 范本",
+    "exportGearCsv": "汇出目前装备 CSV",
+    "importCsv": "批次汇入 CSV",
+    "gearLibHint": "示范资料来自 Excel「acc set」+「装备」。自订 / 覆写标 ★。可多选后批次删除。",
+    "searchGear": "搜寻名称 / 套装 / 部位",
+    "allSlots": "全部部位",
+    "selectAllVisible": "全选目前列表",
+    "selectedCount": {
+      "tpl": "已选 {n} 件",
+      "args": [
+        "n"
+      ]
+    },
+    "deleteSelected": "删除选取",
+    "confirmDeleteGearN": {
+      "tpl": "确定删除选取的 {n} 件装备？",
+      "args": [
+        "n"
+      ]
+    },
+    "confirmDeleteNamed": {
+      "tpl": "删除「{name}」？",
+      "args": [
+        "name"
+      ]
+    },
+    "effectsSummary": "特效说明",
+    "editItem": "编辑道具 / Buff",
+    "addItem": "新增道具 / Buff",
+    "addItemBtn": "新增道具",
+    "itemNamePh": "例如：活动 Buff",
+    "itemStatsPh": "全属性伤害 +17%\n附加伤害 +15%",
+    "itemCsvHint": "CSV 栏位：id,name,stats。有 id 且已存在则更新，否则新增。",
+    "exportItemCsv": "汇出目前道具 CSV",
+    "itemLibHint": "示范项目来自 siumai 伤害注记。可编辑、多选删除、CSV 批次汇入。",
+    "searchItems": "搜寻名称 / 属性",
+    "confirmDeleteItemN": {
+      "tpl": "确定删除选取的 {n} 件道具？",
+      "args": [
+        "n"
+      ]
+    },
+    "compareTitle": "伤害比较",
+    "compareHint": "每个配置可填训练场实测伤害。比较分页用实测（未填则用公式）排出伤害比。勾选最多 5 组，第一个为基准。",
+    "observedTraining": "训练场实测",
+    "observedTrainingHint": "填此配置在游戏训练场看到的数字，伤害会绑在这个配置上。比较分页用它计算各配置伤害比；留空则用公式训练场伤害。",
+    "observedTrainingPh": "训练场看到的伤害",
+    "damageRatioTitle": "配置伤害比",
+    "boundDamage": "配置伤害",
+    "boundDamageHint": "有实测用实测，没有则用公式。",
+    "vsBest": "相对最强",
+    "observedTag": "实测",
+    "formulaTag": "公式",
+    "observedVsFormula": "实测 / 公式",
+    "noObserved": "未填实测",
+    "colBoundDmg": "配置伤害",
+    "ratioOfBest": "相对最强",
+    "ratioOfBaseline": "相对基准",
+    "compareOrder": "比较顺序",
+    "baseline": "基准",
+    "moveUp": "上移",
+    "moveDown": "下移",
+    "moveLeft": "左移",
+    "moveRight": "右移",
+    "moveUpAria": {
+      "tpl": "将 {name} 上移",
+      "args": [
+        "name"
+      ]
+    },
+    "moveDownAria": {
+      "tpl": "将 {name} 下移",
+      "args": [
+        "name"
+      ]
+    },
+    "moveLeftAria": {
+      "tpl": "将 {name} 左移",
+      "args": [
+        "name"
+      ]
+    },
+    "moveRightAria": {
+      "tpl": "将 {name} 右移",
+      "args": [
+        "name"
+      ]
+    },
+    "setBaseline": "设为基准",
+    "setBaselineTitle": "设为基准（移到第一位）",
+    "needTwoProfiles": "请至少勾选 2 个配置。",
+    "compareItem": "项目",
+    "baselineTag": "基准 · ",
+    "dmgVsBaseline": "伤害比较（相对基准）",
+    "upliftVsThis": "提升%（基准相对此档）",
+    "quickPick": "快速勾选",
+    "damageWord": "伤害",
+    "footer": {
+      "tpl": "公式来源：Excel「siumai 伤害」· 示范装备：「acc set」{n} 件（含装备分页）· 回路与徽记方案属性计入公式 · 本机 localStorage 储存 · 可将配置嵌在 URL 分享",
+      "args": [
+        "n"
+      ]
+    },
+    "insigniaMarginalHint": "各徽记边际贡献（卸下后伤害掉多少）",
+    "customDefault": "自订",
+    "defaultProfileName": {
+      "tpl": "配置 {n}",
+      "args": [
+        "n"
+      ]
+    },
+    "copiedSuffix": " (复制)",
+    "noParsedStats": "（无解析到的数值）",
+    "promptCopyLink": "复制分享连结：",
+    "urlLongWarn": {
+      "tpl": "（连结较长 {n} 字，部分通讯软体可能截断）",
+      "args": [
+        "n"
+      ]
+    },
+    "shareNeedSelect": "请先勾选「比较」或选择要分享的配置",
+    "shareNeedProfile": "请先选择要分享的配置",
+    "copiedFullOne": {
+      "tpl": "已复制「{name}」完整分享连结",
+      "args": [
+        "name"
+      ]
+    },
+    "copiedFullMany": {
+      "tpl": "已复制 {n} 组配置的完整分享连结",
+      "args": [
+        "n"
+      ]
+    },
+    "copiedStatsOne": {
+      "tpl": "已复制「{name}」数值分享连结",
+      "args": [
+        "name"
+      ]
+    },
+    "copiedStatsMany": {
+      "tpl": "已复制 {n} 组配置的数值分享连结",
+      "args": [
+        "n"
+      ]
+    },
+    "shareFullFail": "产生分享连结失败",
+    "shareStatsFail": "产生数值分享连结失败",
+    "badCircuitCode": "无法解析回路方案字串，请确认是否完整、未截断",
+    "badInsigniaCode": "无法解析徽记方案字串，请确认是否完整、未截断",
+    "importedCircuit": {
+      "tpl": "已导入回路方案「{scheme}」并套用到配置「{profile}」，伤害依此角色目前数值计算",
+      "args": [
+        "scheme",
+        "profile"
+      ]
+    },
+    "importedInsignia": {
+      "tpl": "已导入徽记方案「{scheme}」并套用到配置「{profile}」，伤害依此角色目前数值计算",
+      "args": [
+        "scheme",
+        "profile"
+      ]
+    },
+    "badSchemeCode": "无法辨识方案字串，请贴上 COA-CS1 或 COA-IS1 开头的内容",
+    "noCircuitOnProfile": "此配置尚未套用回路方案",
+    "noInsigniaOnProfile": "此配置尚未套用徽记方案",
+    "addedProfile": "已新增配置",
+    "copiedProfile": "已复制配置",
+    "deletedProfile": "已删除配置",
+    "needGearName": "请输入装备名称",
+    "needItemName": "请输入道具名称",
+    "updatedGear": {
+      "tpl": "已更新装备：{name}",
+      "args": [
+        "name"
+      ]
+    },
+    "addedGear": {
+      "tpl": "已新增装备：{name}",
+      "args": [
+        "name"
+      ]
+    },
+    "updatedItem": {
+      "tpl": "已更新道具：{name}",
+      "args": [
+        "name"
+      ]
+    },
+    "addedItem": {
+      "tpl": "已新增道具：{name}",
+      "args": [
+        "name"
+      ]
+    },
+    "deletedGearN": {
+      "tpl": "已删除 {n} 件装备",
+      "args": [
+        "n"
+      ]
+    },
+    "deletedItemN": {
+      "tpl": "已删除 {n} 件道具",
+      "args": [
+        "n"
+      ]
+    },
+    "importFailErrors": {
+      "tpl": "汇入失败：{errors}",
+      "args": [
+        "errors"
+      ]
+    },
+    "importFailEmpty": "汇入失败：CSV 没有有效列",
+    "skippedRows": {
+      "tpl": "（{n} 列略过）",
+      "args": [
+        "n"
+      ]
+    },
+    "gearImportDone": {
+      "tpl": "装备汇入完成：新增 {created}、更新 {updated}{note}",
+      "args": [
+        "created",
+        "updated",
+        "note"
+      ]
+    },
+    "itemImportDone": {
+      "tpl": "道具汇入完成：新增 {created}、更新 {updated}{note}",
+      "args": [
+        "created",
+        "updated",
+        "note"
+      ]
+    },
+    "gearCsvFail": "装备 CSV 汇入失败",
+    "itemCsvFail": "道具 CSV 汇入失败",
+    "exportedJson": "已汇出 JSON",
+    "importedJson": "汇入完成",
+    "jsonBad": "汇入失败：JSON 格式错误",
+    "pickProfileFirst": "请先在「配置」分页选择一个配置",
+    "shareExistsOne": {
+      "tpl": "分享配置已存在，已开启：{name}",
+      "args": [
+        "name"
+      ]
+    },
+    "shareExistsMany": {
+      "tpl": "分享的 {n} 组配置均已存在，已开启现有配置",
+      "args": [
+        "n"
+      ]
+    },
+    "shareImportedOne": {
+      "tpl": "已从分享连结汇入配置：{name}",
+      "args": [
+        "name"
+      ]
+    },
+    "shareImportedMany": {
+      "tpl": "已从分享连结汇入 {n} 组配置",
+      "args": [
+        "n"
+      ]
+    },
+    "shareImportedPartial": {
+      "tpl": "已汇入 {added} 组新配置；{skipped} 组已存在，已略过",
+      "args": [
+        "added",
+        "skipped"
+      ]
+    },
+    "editCircuit": "编辑回路",
+    "addCircuit": "新增回路",
+    "circuitFormHint": "每件回路 1 条主属性 + 最多 4 条副属性 + 最多 4 条突破属性（30 等后解锁）。时间只能装头/手/脚，冥灯装上衣/裤子，星轨装印章/护符，辉钥装武器/项链/护腕/戒指。突破里的回路增伤会进公式 (1+回路)；全属性伤害、全属性强化、提伤、头目、异常、技伤、暴率、暴伤、攻击力、力量智力也会计入。攻击力同时加进物攻与魔攻基础值；物攻／魔攻副属加基础数值（非百分比）；最终攻击再乘力量（物攻）或智力（魔攻）。冰火电暗（副属／星轨主属）以属强点数走 (1+属强/220)，且需符合配置的技能属性。",
+    "autoNamePh": "留空则依主属性自动命名",
+    "circuitKind": "回路种类",
+    "kindWithSlots": {
+      "tpl": "{kind}（{slots}）",
+      "args": [
+        "kind",
+        "slots"
+      ]
+    },
+    "mainStat": "主属性",
+    "elemPoints": " · 属强点数",
+    "mainStatValue": "主属性数值",
+    "subStatsTitle": "副属性（最多 4 条，共通）",
+    "subStat": "副属性",
+    "breakStatsTitle": "突破属性（最多 4 条，可重复）",
+    "breakStatsHint": "回路增伤、全属性伤害、全属性强化、技能伤害、伤害提升、头目伤害、异常伤害、暴伤、暴率、冷却、攻速、力量智力、敏捷精神、生命、攻击力。相同属性可选多次，数值会加总。",
+    "breakLabel": "突破",
+    "circuitLib": "回路库",
+    "searchCircuits": "搜寻名称 / 种类 / 主属性",
+    "allKinds": "全部种类",
+    "sortDefault": "预设排序",
+    "sortGain": "依伤害增益",
+    "noCircuits": "尚无回路，先在上方新增一条。",
+    "canSocket": {
+      "tpl": "可装：{slots}",
+      "args": [
+        "slots"
+      ]
+    },
+    "inUseScheme": " · 目前方案使用中",
+    "circuitSchemes": "回路方案",
+    "addScheme": "新增方案",
+    "circuitSchemeHint": "11 件装备各镶 1 个回路。多个配置可共用同一方案；改方案会同时影响所有套用它的配置。",
+    "exportNeedScheme": "请先新增或选择要汇出的方案",
+    "noSchemes": "尚无方案，点「新增方案」开始配搭，或在上方贴上分享字串导入。",
+    "editingScheme": "目前编辑方案",
+    "schemeName": "方案名称",
+    "applyToProfile": "套用到目前配置",
+    "appliedNow": "目前配置使用中",
+    "copyScheme": "复制方案",
+    "deleteScheme": "删除方案",
+    "confirmDeleteScheme": {
+      "tpl": "删除方案「{name}」？",
+      "args": [
+        "name"
+      ]
+    },
+    "sockets11": "11 格镶嵌",
+    "unsocketed": "— 未镶嵌 —",
+    "moveHere": "（改装至此）",
+    "subCount": {
+      "tpl": " · 副 {n}",
+      "args": [
+        "n"
+      ]
+    },
+    "breakCount": {
+      "tpl": " · 突 {n}",
+      "args": [
+        "n"
+      ]
+    },
+    "canFit": {
+      "tpl": "可装 {slots}",
+      "args": [
+        "slots"
+      ]
+    },
+    "schemeTotal": "方案加总（计入伤害公式）",
+    "noCircuitDamage": "尚未有可计入伤害的回路属性。",
+    "extraNotInFormula": "以下不在目前伤害公式乘区，仅作纪录：",
+    "previewWithScheme": "目前配置（含此方案）",
+    "previewNoCircuit": "不含回路",
+    "previewCircuitGain": "回路提升",
+    "previewNeedProfile": "选择一个配置后，可即时预览此方案对最终伤害的影响。",
+    "socketToCompare": "镶嵌回路后可比较每件对伤害的贡献。",
+    "pickProfileToCompare": "选择一个配置后，可计算每件回路的伤害增益并互相比较。",
+    "schemeContrib": {
+      "tpl": "方案贡献 {dmg}（{ratio}）",
+      "args": [
+        "dmg",
+        "ratio"
+      ]
+    },
+    "addToSlot": {
+      "tpl": "加到{slot}",
+      "args": [
+        "slot"
+      ]
+    },
+    "swapToSlot": {
+      "tpl": "换上{slot}",
+      "args": [
+        "slot"
+      ]
+    },
+    "keepSlot": {
+      "tpl": "维持{slot}",
+      "args": [
+        "slot"
+      ]
+    },
+    "circuitGainTitle": "各回路伤害贡献",
+    "circuitGainHint": "依目前配置计算。边际贡献＝卸下该件后伤害掉多少（与其他回路叠加后，加总不一定等于整套提升）。单独贡献＝只装这一件相对不含回路。",
+    "gainAlgoAria": "贡献算法",
+    "marginal": "边际贡献",
+    "solo": "单独贡献",
+    "shareOfSet": {
+      "tpl": "占整套 {ratio}",
+      "args": [
+        "ratio"
+      ]
+    },
+    "unused": "— 未使用 —",
+    "valueLabel": "数值",
+    "updatedCircuit": {
+      "tpl": "已更新回路：{name}",
+      "args": [
+        "name"
+      ]
+    },
+    "addedCircuit": {
+      "tpl": "已新增回路：{name}",
+      "args": [
+        "name"
+      ]
+    },
+    "filledForm": "已填入表单，请核对数值后按新增／储存",
+    "deletedCircuit": {
+      "tpl": "已删除回路：{name}",
+      "args": [
+        "name"
+      ]
+    },
+    "addedCircuitScheme": "已新增回路方案",
+    "copiedCircuitScheme": "已复制回路方案",
+    "deletedCircuitScheme": "已删除回路方案",
+    "pickSchemeToExport": "请先选择要汇出的方案",
+    "appliedSchemeTo": {
+      "tpl": "已将「{scheme}」套用到 {profile}",
+      "args": [
+        "scheme",
+        "profile"
+      ]
+    },
+    "pickAProfile": "请先选择一个配置",
+    "defaultSchemeName": {
+      "tpl": "方案 {n}",
+      "args": [
+        "n"
+      ]
+    },
+    "newScheme": "新方案",
+    "affixMain": "主：",
+    "affixSub": "副：",
+    "affixBreak": "突：",
+    "unusedElement": {
+      "tpl": "{el}属 +{v}（未匹配技能属性）",
+      "args": [
+        "el",
+        "v"
+      ]
+    },
+    "unusedElementEn": {
+      "tpl": "{el} +{v} (does not match skill element)",
+      "args": [
+        "el",
+        "v"
+      ]
+    },
+    "editInsignia": "编辑徽记",
+    "addInsignia": "新增徽记",
+    "insigniaFormHint": "徽记镶在对应装备部位上，主要计算史诗（金）与稀有（粉）。每件可指定 1–多个可镶部位、升阶 1–3，以及最多 6 条效果。数值请填该阶级的实际值；暴率／暴伤／技伤／普攻／提伤／头目／异常／物魔攻% 会计入伤害公式，冰火电暗以属强点数走 (1+属强/220) 且需符合配置的技能属性。",
+    "autoNameInsigniaPh": "留空则依稀有度与第一条效果自动命名",
+    "rarity": "稀有度",
+    "rank": "阶级",
+    "rankN": {
+      "tpl": "{n} 阶",
+      "args": [
+        "n"
+      ]
+    },
+    "insigniaNotePh": "例如来源副本、未计入的技能等级 +1",
+    "socketSlots": "可镶部位",
+    "socketSlotsHint": "同一件徽记通常只能装在列出的部位之一。方案里一件徽记同时只占一格。",
+    "effectsMax6": "效果（最多 6 条）",
+    "effectsHint": "百分比栏位以 0–100 输入（例如暴伤 20 = 20%）。全属性、冰火电暗为点数。",
+    "insigniaLib": "徽记库",
+    "searchInsignias": "搜寻名称 / 部位 / 效果",
+    "allRarities": "全部稀有度",
+    "noInsignias": "尚无徽记，先在上方新增一条。",
+    "insigniaSchemes": "徽记方案",
+    "insigniaSchemeHint": "11 件装备各镶 1 个徽记。多个配置可共用同一方案；改方案会同时影响所有套用它的配置。",
+    "noInsigniaSchemes": "尚无方案，点「新增方案」开始配搭，或在上方贴上分享字串导入。",
+    "soloBeforeScheme": "选择一个配置后，即使尚未组方案，也可先看每件徽记单独能贡献多少伤害。",
+    "cannotFitSlot": "已不能装此部位，请改选",
+    "noEffect": "无效果",
+    "moreEffects": {
+      "tpl": " · 另 {n} 条",
+      "args": [
+        "n"
+      ]
+    },
+    "nCanFit": {
+      "tpl": "{n} 件可装",
+      "args": [
+        "n"
+      ]
+    },
+    "noneForSlot": "库中尚无此部位徽记",
+    "noInsigniaDamage": "尚未有可计入伤害的徽记属性。",
+    "previewNoInsignia": "不含徽记",
+    "previewInsigniaGain": "徽记提升",
+    "pickProfileInsigniaCompare": "选择一个配置后，可计算每件徽记的伤害增益并互相比较。",
+    "addInsigniaToCompare": "新增徽记后，可依目前配置计算每件的伤害贡献。",
+    "needOneSlot": "请至少勾选一个可镶部位",
+    "updatedInsignia": {
+      "tpl": "已更新徽记：{name}",
+      "args": [
+        "name"
+      ]
+    },
+    "addedInsignia": {
+      "tpl": "已新增徽记：{name}",
+      "args": [
+        "name"
+      ]
+    },
+    "copiedInsignia": {
+      "tpl": "已复制徽记：{name}",
+      "args": [
+        "name"
+      ]
+    },
+    "deletedInsignia": {
+      "tpl": "已删除徽记：{name}",
+      "args": [
+        "name"
+      ]
+    },
+    "addedInsigniaScheme": "已新增徽记方案",
+    "copiedInsigniaScheme": "已复制徽记方案",
+    "deletedInsigniaScheme": "已删除徽记方案",
+    "effectN": {
+      "tpl": "效果 {n}",
+      "args": [
+        "n"
+      ]
+    },
+    "rankShort": {
+      "tpl": "{n}阶",
+      "args": [
+        "n"
+      ]
+    },
+    "insigniaGainTitle": "各徽记伤害贡献",
+    "insigniaGainHintWith": "依目前配置计算（含此方案的其他徽记与回路／装备）。边际贡献＝卸下该件后伤害掉多少。单独贡献＝只装这一件相对不含徽记。徽记库则列出每件相对目前方案的最佳加装／替换。",
+    "insigniaGainHintEmpty": "依目前配置计算（尚未有方案，视为空手镶嵌）。边际贡献＝卸下该件后伤害掉多少。单独贡献＝只装这一件相对不含徽记。徽记库则列出每件相对目前方案的最佳加装／替换。",
+    "equippedSection": "已镶嵌",
+    "notSocketedYet": "尚未镶嵌。下面先依目前配置排出每件徽记单独能贡献多少伤害。",
+    "allInsignias": "全部徽记",
+    "libraryGainHint": "每件取其可镶部位里伤害最高的一格。已镶嵌且维持原位者增量为 0。",
+    "emptySchemeName": "（空方案）",
+    "noAffix": "无属性",
+    "unspecifiedSlots": "未指定部位",
+    "schemeShare": "方案分享",
+    "applyShareScheme": "套用分享方案",
+    "exportString": "汇出字串",
+    "exporting": "汇出中…",
+    "importing": "汇入中…",
+    "applying": "套用中…",
+    "exportCircuit": "汇出回路",
+    "exportInsignia": "汇出徽记",
+    "schemeString": "方案字串",
+    "importApply": "导入并套用到配置",
+    "importApplyProfile": "导入并套用到此配置",
+    "recopyLast": "再复制上次汇出",
+    "pickSchemeExport": "请先选择要汇出的方案",
+    "copyCompressed": "复制压缩字串，可贴给其他人汇入",
+    "exportCircuitTitle": "汇出此配置目前套用的回路方案",
+    "exportInsigniaTitle": "汇出此配置目前套用的徽记方案",
+    "noCircuitOnThis": "此配置尚未套用回路方案",
+    "noInsigniaOnThis": "此配置尚未套用徽记方案",
+    "shareBoxHintCircuit": "汇出目前方案（含已镶嵌的回路）为一串压缩字串。导入后会新增方案并套用到目前角色配置，用该角色自己的装备与数值计算伤害，不会覆盖对方的基底属性。",
+    "shareBoxHintInsignia": "汇出目前方案（含已镶嵌的徽记）为一串压缩字串。导入后会新增方案并套用到目前角色配置，用该角色自己的装备与数值计算伤害，不会覆盖对方的基底属性。",
+    "shareBoxPlaceholderCircuit": "贴上 COA-CS1 开头的字串，或按「汇出字串」产生",
+    "shareBoxPlaceholderInsignia": "贴上 COA-IS1 开头的字串，或按「汇出字串」产生",
+    "profileShareHint": "贴上队友的回路或徽记方案字串，会新增方案并套用到这份角色配置。伤害用此角色目前的基底、装备与道具计算，不会改写对方或你的角色数值。",
+    "profileSharePlaceholder": "贴上 COA-CS1 或 COA-IS1 开头的字串",
+    "copiedKind": {
+      "tpl": "已复制{kind}字串（{n} 字）",
+      "args": [
+        "kind",
+        "n"
+      ]
+    },
+    "generatedKind": {
+      "tpl": "已产生{kind}字串（{n} 字），请手动复制",
+      "args": [
+        "kind",
+        "n"
+      ]
+    },
+    "exportKindFail": {
+      "tpl": "汇出{kind}失败",
+      "args": [
+        "kind"
+      ]
+    },
+    "circuitCodeWrongTab": "这是回路方案字串，请到「回路配搭」分页汇入",
+    "insigniaCodeWrongTab": "这是徽记方案字串，请到「徽记配搭」分页汇入",
+    "importFail": "汇入失败",
+    "exportFail": "汇出失败",
+    "copiedAgain": {
+      "tpl": "已再次复制字串（{n} 字）",
+      "args": [
+        "n"
+      ]
+    },
+    "copyManually": "请从上方栏位手动复制",
+    "copiedProfileKind": {
+      "tpl": "已复制此配置的{kind}字串（{n} 字）",
+      "args": [
+        "kind",
+        "n"
+      ]
+    },
+    "generatedProfileKind": {
+      "tpl": "已产生此配置的{kind}字串（{n} 字），请手动复制",
+      "args": [
+        "kind",
+        "n"
+      ]
+    },
+    "circuitSchemeWord": "回路方案",
+    "insigniaSchemeWord": "徽记方案",
+    "scanTitle": "自动辨识数值",
+    "scanHint": "贴上或拖入游戏回路截图，或直接贴属性文字。辨识在浏览器内完成，图不会上传。第一次截图辨识会下载中文资料，之后会比较快。请核对后再新增。",
+    "pickScreenshot": "选择截图",
+    "pasteClipboard": "从剪贴簿贴上",
+    "clear": "清除",
+    "scanAlt": "待辨识截图",
+    "scanTextLabel": "辨识／贴上文字",
+    "scanPlaceholder": "例如：\n时间\n暴击率 +12.5%\n暴击伤害 +24%\n智力 +8.2%\n物攻 +45\n突破\n回路增伤 +4.5%",
+    "scanning": "辨识中…",
+    "noStatsYet": "尚未对到属性。可改手动输入，或修正上方文字后会即时重解析。",
+    "fillForm": "填入表单",
+    "addCircuitDirect": "直接新增回路",
+    "ocrPrepare": "准备图片…",
+    "ocrLoadEngine": "载入辨识引擎",
+    "ocrInitEngine": "初始化引擎",
+    "ocrDownloadLang": "下载中文辨识资料（首次较久）",
+    "ocrInitApi": "准备辨识",
+    "ocrRecognize": "辨识文字",
+    "ocrProgress": {
+      "tpl": "{label} {pct}%",
+      "args": [
+        "label",
+        "pct"
+      ]
+    },
+    "ocrHits": {
+      "tpl": "已辨识 {n} 条属性，请核对后新增",
+      "args": [
+        "n"
+      ]
+    },
+    "ocrNoHits": "截图已读取，但没对到属性；可改贴文字",
+    "ocrFail": {
+      "tpl": "截图辨识失败：{msg}。可改贴属性文字。",
+      "args": [
+        "msg"
+      ]
+    },
+    "clipboardBlocked": "这个浏览器不允许读取剪贴簿，请改用 Ctrl+V 或选择档案。",
+    "clipboardEmpty": "剪贴簿里没有图片或文字。",
+    "clipboardDenied": "读取剪贴簿被拒绝，请改用 Ctrl+V 或选择档案。",
+    "parseNoHits": "没有辨识到任何回路属性，请检查文字或截图。",
+    "parseBadMain": {
+      "tpl": "主属性「{stat}」不是{kind}的合法主属，请改种类或主属。",
+      "args": [
+        "stat",
+        "kind"
+      ]
+    },
+    "parseHigh": {
+      "tpl": "{stat} {raw} 偏高，请核对辨识结果。",
+      "args": [
+        "stat",
+        "raw"
+      ]
+    },
+    "parseKind": {
+      "tpl": "种类：{v}",
+      "args": [
+        "v"
+      ]
+    },
+    "parseName": {
+      "tpl": "名称：{v}",
+      "args": [
+        "v"
+      ]
+    },
+    "tabProfessions": "职业循环",
+    "tabProfessionsShort": "职业",
+    "profession": "职业",
+    "noProfession": "未选职业",
+    "noProfessionOption": "— 未指定职业 —",
+    "trainingDummy": "训练场",
+    "trainingChip": "训练场",
+    "noProfessionShort": "—",
+    "trainingCompare": "训练场比较（相对基准）",
+    "cycleOnMultiplier": {
+      "tpl": "{name} 循环 ×{cycle} → 有效 {effective}",
+      "args": [
+        "name",
+        "cycle",
+        "effective"
+      ]
+    },
+    "newSkill": "新技能",
+    "pickProfileAndProfession": "请先选择配置与职业",
+    "needTrainingNumber": "请输入训练场看到的伤害数字",
+    "calibratedCycle": {
+      "tpl": "已用训练场 {dmg} 校正「{name}」循环倍率为 {cycle}",
+      "args": [
+        "dmg",
+        "name",
+        "cycle"
+      ]
+    },
+    "resetProfession": {
+      "tpl": "已还原「{name}」为预设循环",
+      "args": [
+        "name"
+      ]
+    },
+    "professionTitle": "职业与循环",
+    "professionHint": "职业决定物／魔与预设属性。循环倍率是一套 rotation 的总％，乘在配置的「技能倍率」上；预设为 1，不改现有数字。技伤与普攻伤害一齐加，不再分占比。填技能％或用训练场数字校正后，才能看出各职业真实一套伤害差。",
+    "editProfession": "编辑职业",
+    "cycleMultiplier": "循环倍率",
+    "effective": "有效",
+    "fromSkillTable": "（由技能表加总）",
+    "cycleSeconds": "循环秒数",
+    "calibrateTitle": "用训练场数字校正",
+    "calibrateHint": {
+      "tpl": "套用此职业到目前配置后，把训练场（防 {def}，不含头目）看到的数字贴上来，反推循环倍率。",
+      "args": [
+        "def"
+      ]
+    },
+    "trainingDamagePh": "训练场伤害",
+    "calibrateThis": "校正此职业",
+    "resetDefault": "还原预设",
+    "collapseSkills": "收合技能表",
+    "editSkills": "编辑技能表",
+    "applyToNamed": {
+      "tpl": "套用到「{name}」",
+      "args": [
+        "name"
+      ]
+    },
+    "skillTableHint": "游戏内技能％（850 = 850%）。次数 × 段数 × ％ / 100 加总后覆盖上方循环倍率。全部为 0 则只用循环倍率。技能与普攻都当伤害计算，不必分种类。",
+    "colUse": "用",
+    "colName": "名称",
+    "colPercent": "％",
+    "colHits": "段",
+    "colUses": "次",
+    "enableSkillAria": {
+      "tpl": "启用 {name}",
+      "args": [
+        "name"
+      ]
+    },
+    "deleteShort": "删",
+    "addSkillRow": "新增技能列",
+    "professionRankTitle": "职业强度比较",
+    "pickBuildForProfession": "请先在「配置」分页选一组配置，作为装备／回路／徽记基底。",
+    "professionRankHint": {
+      "tpl": "以「{name}」的基底、装备、道具、回路与徽记，只换职业的物／魔、属性与循环，比较训练场伤害。",
+      "args": [
+        "name"
+      ]
+    },
+    "applyProfessionType": "套用职业物／魔",
+    "applyProfessionElement": "套用职业预设属性",
+    "colRank": "排名",
+    "colProfession": "职业",
+    "colType": "类型",
+    "colCycle": "循环",
+    "colTrainingDmg": "训练场伤害",
+    "colVsBest": "相对最强",
+    "perSecond": "/ 秒",
+    "applied": "已套用",
+    "apply": "套用",
+    "appliedProfession": {
+      "tpl": "已将职业「{name}」套用到「{profile}」",
+      "args": [
+        "name",
+        "profile"
+      ]
+    },
+    "addProfession": "新增职业",
+    "newProfessionName": "新职业",
+    "professionNamePh": "例如：鬼刃",
+    "customProfession": "自订",
+    "professionFamily": "职业系",
+    "professionDamageType": "物／魔",
+    "professionElement": "属性",
+    "professionNotePh": "备注（可选）",
+    "needProfessionName": "请输入职业名称",
+    "addedProfession": {
+      "tpl": "已新增职业「{name}」",
+      "args": [
+        "name"
+      ]
+    },
+    "deletedProfession": {
+      "tpl": "已删除职业「{name}」",
+      "args": [
+        "name"
+      ]
+    },
+    "deleteProfession": "删除此职业",
+    "confirmDeleteProfession": {
+      "tpl": "删除自订职业「{name}」？使用此职业的配置会变成未指定。",
+      "args": [
+        "name"
+      ]
+    },
+    "customProfessionHint": "自订职业会保存在本机，可改名称、物／魔与属性，并填循环。",
+    "tabLanguages": "语言",
+    "tabLanguagesShort": "语言",
+    "langEditorTitle": "语言编辑器",
+    "langEditorHint": "新增或编辑语言包。它会存在本浏览器（localStorage），立即生效。汇出 JSON 可加入程式原始码永久保留。",
+    "langNew": "新增语言",
+    "langEditExisting": "编辑现有",
+    "langCode": "代码",
+    "langCodePh": "例如 ja",
+    "langLabel": "显示名称",
+    "langHtmlLang": "HTML lang",
+    "langHtmlLangPh": "例如 ja",
+    "langBuiltin": "内建",
+    "langLocal": "本地",
+    "langDelete": "删除",
+    "langDeleteConfirm": {
+      "tpl": "删除本地语言「{code}」？它只存在本浏览器。",
+      "args": [
+        "code"
+      ]
+    },
+    "langSave": "储存",
+    "langExport": "汇出 JSON",
+    "langImport": "汇入 JSON",
+    "langExported": {
+      "tpl": "已汇出 {file}",
+      "args": [
+        "file"
+      ]
+    },
+    "langImported": {
+      "tpl": "已汇入语言 {code}",
+      "args": [
+        "code"
+      ]
+    },
+    "langImportBad": "语言 JSON 无效",
+    "langSearch": "搜寻键值",
+    "langProgress": {
+      "tpl": "已翻译 {done}/{total}",
+      "args": [
+        "done",
+        "total"
+      ]
+    },
+    "langGroupLabels": "标签",
+    "langGroupMessages": "讯息",
+    "langBaseCol": "基准（en）",
+    "langYourCol": "翻译",
+    "langReset": "重设为基准",
+    "langNeedCode": "请输入语言代码",
+    "langCodeExists": "代码已作为内建语言存在",
+    "langSaved": {
+      "tpl": "语言「{code}」已存至本机",
+      "args": [
+        "code"
+      ]
+    },
+    "langPlaceholdersHint": "保留 {括号} 中的字词，它们会在执行时填入。",
+    "langUntranslatedNote": "空白栏位会使用基准语言。",
+    "langImportApply": "汇入并编辑",
+    "langEdit": "编辑",
+    "tabDecks": "牌组",
+    "tabDecksShort": "牌组",
+    "deckScheme": "牌组方案",
+    "noDeckScheme": "无",
+    "deckSchemeWord": "牌组方案",
+    "deckLib": "牌组库",
+    "allDecks": "全部牌组",
+    "noDecks": "尚无牌组 — 新增第一张卡片。",
+    "searchDecks": "搜索牌组",
+    "deckSchemes": "牌组方案",
+    "deckSchemeHint": "组出 4 张卡片的牌组，并套用到配置以获得加成。",
+    "noDeckSchemes": "尚无牌组方案。",
+    "deckGainTitle": "牌组增益",
+    "deckGainHintWith": "当前套用牌组方案带来的伤害增益。",
+    "deckGainHintEmpty": "套用或选择牌组方案以查看增益。",
+    "editDeck": "编辑牌组",
+    "addDeck": "新增牌组",
+    "deckFormHint": "每张牌组卡提供属性加成，最多 6 个效果。",
+    "autoNameDeckPh": "依卡名自动命名",
+    "deckAffixHint": "牌组套用时，每张卡的效果都会加入。",
+    "previewNoDeck": "未套用牌组",
+    "previewDeckGain": "套用牌组",
+    "noDeckDamage": "此配置下牌组未提供伤害属性。",
+    "addedDeckScheme": "已新增牌组方案",
+    "copiedDeckScheme": "已复制牌组方案",
+    "deletedDeckScheme": "已删除牌组方案",
+    "updatedDeck": {
+      "tpl": "牌组「{name}」已更新",
+      "args": [
+        "name"
+      ]
+    },
+    "addedDeck": {
+      "tpl": "已新增牌组「{name}」",
+      "args": [
+        "name"
+      ]
+    },
+    "deletedDeck": {
+      "tpl": "已删除牌组「{name}」",
+      "args": [
+        "name"
+      ]
+    },
+    "copiedDeck": {
+      "tpl": "已复制牌组「{name}」",
+      "args": [
+        "name"
+      ]
+    },
+    "pickProfileDeckCompare": "选择配置以比较牌组增益",
+    "addDeckToCompare": "在库中添加牌组卡以比较增益",
+    "deckCodeWrongTab": "此牌组代码属于牌组分页。",
+    "exportDeck": "导出牌组",
+    "exportDeckTitle": "将当前牌组方案复制为分享代码",
+    "noDeckOnThis": "此配置无牌组方案",
+    "noDeckOnProfile": "当前配置无牌组方案",
+    "importedDeck": {
+      "tpl": "已将牌组方案「{name}」套用到配置「{profile}」",
+      "args": [
+        "name",
+        "profile"
+      ]
+    },
+    "badDeckCode": "无效的牌组方案代码"
+  },
+  "meta": {
+    "htmlLang": "zh-CN",
+    "label": "简体中文"
+  }
+}
