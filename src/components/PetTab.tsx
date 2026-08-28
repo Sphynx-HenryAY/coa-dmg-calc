@@ -305,12 +305,34 @@ export function PetTab() {
         scheme2,
         pets,
         petsById,
-        (next) => profileResult(profile, undefined, undefined, undefined, next).finalDamage,
+        (next) =>
+          profileResult(
+            profile,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            next,
+          ).finalDamage,
       );
     },
     computePreview: (scheme, profile) => ({
-      withScheme: profileResult(profile, undefined, undefined, undefined, scheme),
-      without: profileResult(profile, undefined, undefined, undefined, null),
+      withScheme: profileResult(
+        profile,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        scheme,
+      ),
+      without: profileResult(
+        profile,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        null,
+      ),
     }),
     shouldShowGainPanel: (profile, comparison) =>
       !!profile && !!comparison,
