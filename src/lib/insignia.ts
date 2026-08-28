@@ -85,6 +85,8 @@ export const INSIGNIA_STAT_LABEL: Record<InsigniaStatKey, string> = {
   otherworld: "異界傷害",
   resonanceCharge: "共鳴充能",
   petDamage: "寵物增傷",
+  allElementDamage: "全屬性傷害",
+  additionalDamage: "附加傷害",
 };
 
 /** Stats entered/displayed as percentages. */
@@ -107,6 +109,8 @@ export const INSIGNIA_PERCENT_STATS = new Set<InsigniaStatKey>([
   "otherworld",
   "resonanceCharge",
   "petDamage",
+  "allElementDamage",
+  "additionalDamage",
 ]);
 
 export const INSIGNIA_ELEMENT_STATS = new Set<InsigniaStatKey>([
@@ -144,6 +148,8 @@ export const INSIGNIA_STAT_OPTIONS: InsigniaStatKey[] = [
   "otherworld",
   "resonanceCharge",
   "petDamage",
+  "allElementDamage",
+  "additionalDamage",
 ];
 
 export const INSIGNIA_RANKS: InsigniaRank[] = [1, 2, 3];
@@ -363,6 +369,12 @@ export function applyInsigniaAffix(
       return;
     case "petDamage":
       addToBag(bag, "petDamage", value);
+      return;
+    case "allElementDamage":
+      addToBag(bag, "allElementDamage", value);
+      return;
+    case "additionalDamage":
+      addToBag(bag, "additionalDamage", value);
       return;
     default:
       return;
@@ -621,6 +633,8 @@ export function contributionLines(
   pushBag("elementalPower", insigniaStatLabel("elementalPower"), false);
   pushBag("attackPercent", insigniaStatLabel("attackPercent"), true);
   pushBag("attackPercentMagic", insigniaStatLabel("attackPercentMagic"), true);
+  pushBag("allElementDamage", insigniaStatLabel("allElementDamage"), true);
+  pushBag("additionalDamage", insigniaStatLabel("additionalDamage"), true);
 
   const { extra: ex } = contrib;
   if (ex.hp) extra.push(`${insigniaStatLabel("hp")} +${trimNum(ex.hp)}`);

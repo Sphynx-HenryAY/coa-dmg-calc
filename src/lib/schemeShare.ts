@@ -12,6 +12,9 @@ import type {
   InsigniaScheme,
   InsigniaSlotId,
   InsigniaStatKey,
+  PetPiece,
+  PetScheme,
+  PetSlotId,
 } from "./types";
 import { makeId } from "./damage";
 import {
@@ -29,11 +32,17 @@ import {
   normalizeDeckPiece,
   normalizeDeckScheme,
 } from "./deck";
+import {
+  PET_SLOT_IDS,
+  normalizePetPiece,
+  normalizePetScheme,
+} from "./pet";
 import { packToken, unpackToken } from "./share";
 
 export const CIRCUIT_SCHEME_PREFIX = "COA-CS1";
 export const INSIGNIA_SCHEME_PREFIX = "COA-IS1";
 export const DECK_SCHEME_PREFIX = "COA-DS1";
+export const PET_SCHEME_PREFIX = "COA-PS1";
 
 type CompactAffix = [string, number];
 
@@ -87,7 +96,12 @@ export type DeckSchemeBundle = {
   pieces: DeckPiece[];
 };
 
-export type SchemeShareKind = "circuit" | "insignia" | "deck";
+export type PetSchemeBundle = {
+  scheme: PetScheme;
+  pieces: PetPiece[];
+};
+
+export type SchemeShareKind = "circuit" | "insignia" | "deck" | "pet";
 
 function compactAffix(stat: string, value: number): CompactAffix {
   return [stat, value];
@@ -443,11 +457,128 @@ export function finalizeDeckSchemeImport(
   };
 }
 
+function collectPetPieces(
+  scheme: PetScheme,
+  piecesById: Map<string, PetPiece>,
+): PetPiece[] {
+  const out: PetPiece[] = [];
+  const seen = new Set<string>();
+  for (const slot of PET_SLOT_IDS) {
+    const id = scheme.equipped[slot];
+    if (!id || seen.has(id)) continue;
+    const piece = piecesById.get(id);
+    if (!piece) continue;
+    seen.add(id);
+    out.push(piece);
+  }
+  return out;
+}
+
+export async function encodePetSchemeCode(
+  scheme: PetScheme,
+  piecesById: Map<string, PetPiece>,
+): Promise<string> {
+  const pieces = collectPetPieces(scheme, piecesById);
+  const indexById = new Map(pieces.map((p, i) => [p.id, i]));
+  const equipped: Array<[string, number]> = [];
+  for (const slot of PET_SLOT_IDS) {
+    const id = scheme.equipped[slot];
+    if (!id) continue;
+    const index = indexById.get(id);
+    if (index === undefined) continue;
+    equipped.push([slot, index]);
+  }
+  const payload = {
+    v: 1,
+    t: "p",
+    n: scheme.name,
+    ...(scheme.note.trim() ? { o: scheme.note } : {}),
+    e: equipped,
+    p: pieces.map((piece) => ({
+      ...(piece.name.trim() ? { n: piece.name } : {}),
+      a: piece.affixes.map((a) => compactAffix(a.stat, a.value)),
+      ...(piece.note.trim() ? { o: piece.note } : {}),
+    })),
+  };
+  return packToken(JSON.stringify(payload), PET_SCHEME_PREFIX);
+}
+
+function parsePetShare(raw: unknown): PetSchemeBundle | null {
+  if (!raw || typeof raw !== "object") return null;
+  const src = raw as Record<string, unknown>;
+  if (src.v !== 1 || src.t !== "p") return null;
+  if (!Array.isArray(src.p)) return null;
+  const now = new Date().toISOString();
+  const pieces: PetPiece[] = [];
+  for (const item of src.p) {
+    if (!item || typeof item !== "object") continue;
+    const p = item as { n?: string; a?: unknown[]; o?: string };
+    const piece = normalizePetPiece({
+      id: makeId("pet"),
+      name: typeof p.n === "string" ? p.n : "",
+      affixes: (p.a ?? [])
+        .map(expandAffix)
+        .filter((x): x is InsigniaAffix => x != null)
+        .map((x) => ({ stat: x.stat as InsigniaStatKey, value: x.value })),
+      note: typeof p.o === "string" ? p.o : "",
+      createdAt: now,
+      updatedAt: now,
+    });
+    if (piece) pieces.push(piece);
+  }
+
+  const equipped: PetScheme["equipped"] = {};
+  if (Array.isArray(src.e)) {
+    for (const row of src.e) {
+      if (!Array.isArray(row) || row.length < 2) continue;
+      const slot = row[0];
+      const index = typeof row[1] === "number" ? row[1] : Number(row[1]);
+      if (typeof slot !== "string" || !Number.isInteger(index)) continue;
+      if (!(PET_SLOT_IDS as string[]).includes(slot)) continue;
+      const piece = pieces[index];
+      if (!piece) continue;
+      equipped[slot as PetSlotId] = piece.id;
+    }
+  }
+
+  const scheme = normalizePetScheme({
+    id: makeId("psch"),
+    name: typeof src.n === "string" ? src.n : "寵物方案",
+    note: typeof src.o === "string" ? src.o : "",
+    equipped,
+    createdAt: now,
+    updatedAt: now,
+  });
+  if (!scheme) return null;
+  return { scheme, pieces };
+}
+
+export async function decodePetSchemeCode(
+  text: string,
+): Promise<PetSchemeBundle | null> {
+  const raw = await unpackToken(text, PET_SCHEME_PREFIX);
+  return parsePetShare(raw);
+}
+
+export function finalizePetSchemeImport(
+  bundle: PetSchemeBundle,
+  existingNames: string[],
+): PetSchemeBundle {
+  return {
+    scheme: {
+      ...bundle.scheme,
+      name: uniqueSchemeName(bundle.scheme.name, existingNames),
+    },
+    pieces: bundle.pieces,
+  };
+}
+
 export function peekSchemeShareKind(text: string): SchemeShareKind | null {
   const compact = text.replace(/\s+/g, "").toUpperCase();
   if (compact.includes("COA-CS1.")) return "circuit";
   if (compact.includes("COA-IS1.")) return "insignia";
   if (compact.includes("COA-DS1.")) return "deck";
+  if (compact.includes("COA-PS1.")) return "pet";
   return null;
 }
 

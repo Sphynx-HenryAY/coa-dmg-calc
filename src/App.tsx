@@ -6,9 +6,11 @@ import { AppStoreProvider, useAppStore, type Tab } from "./store/AppStore";
 import { CircuitTab } from "./components/CircuitTab";
 import { InsigniaTab } from "./components/InsigniaTab";
 import { DeckTab } from "./components/DeckTab";
+import { PetTab } from "./components/PetTab";
 import { ProfessionTab } from "./components/ProfessionTab";
 import { LanguageTab } from "./components/LanguageTab";
 import { ProfilesTab } from "./components/ProfilesTab";
+import { DamageRankingTab } from "./components/DamageRankingTab";
 import { GearItemsTab } from "./components/GearItemsTab";
 import { CompareTab } from "./components/CompareTab";
 
@@ -82,9 +84,11 @@ function Shell(): React.JSX.Element {
             ["circuits", m.tabCircuits, m.tabCircuitsShort],
             ["insignias", m.tabInsignias, m.tabInsigniasShort],
             ["decks", m.tabDecks, m.tabDecksShort],
+            ["pets", m.tabPets, m.tabPetsShort],
             ["professions", m.tabProfessions, m.tabProfessionsShort],
             ["compare", m.tabCompare, m.tabCompareShort],
             ["languages", m.tabLanguages, m.tabLanguagesShort],
+            ["rankings", m.tabRankings, m.tabRankingsShort],
           ] as const
         ).map(([id, label, shortLabel]) => (
           <button
@@ -105,9 +109,11 @@ function Shell(): React.JSX.Element {
       {tab === "circuits" && <CircuitTab />}
       {tab === "insignias" && <InsigniaTab />}
       {tab === "decks" && <DeckTab />}
+      {tab === "pets" && <PetTab />}
       {tab === "professions" && <ProfessionTab />}
       {tab === "languages" && <LanguageTab />}
       {tab === "compare" && <CompareTab />}
+      {tab === "rankings" && <DamageRankingTab />}
 
       <footer className="footer muted small">
         {m.footer(demoData.equipment.length)}

@@ -605,9 +605,9 @@ export function LoadoutTab<
                 </div>
 
                 <h3 className="section-title">
-                  {m.sockets11}{" "}
+                  {m.socketsLabel(config.slotDefs.length)}{" "}
                   <span className="muted small">
-                    {config.equippedCount(activeScheme)} / 11
+                    {config.equippedCount(activeScheme)} / {config.slotDefs.length}
                   </span>
                 </h3>
                 <div className="circuit-board">

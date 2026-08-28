@@ -26,7 +26,9 @@ export function SchemeShareBox({
       ? m.circuitSchemeWord
       : kind === "deck"
         ? m.deckSchemeWord
-        : m.insigniaSchemeWord;
+        : kind === "pet"
+          ? m.petSchemeWord
+          : m.insigniaSchemeWord;
   const [draft, setDraft] = useState("");
   const [lastExported, setLastExported] = useState("");
   const [busy, setBusy] = useState<"export" | "import" | null>(null);
@@ -70,7 +72,9 @@ export function SchemeShareBox({
           ? m.circuitCodeWrongTab
           : found === "deck"
             ? m.deckCodeWrongTab
-            : m.insigniaCodeWrongTab,
+            : found === "pet"
+              ? m.petCodeWrongTab
+              : m.insigniaCodeWrongTab,
       );
       return;
     }
@@ -107,7 +111,13 @@ export function SchemeShareBox({
         </button>
       </div>
       <p className="muted small">
-        {kind === "circuit" ? m.shareBoxHintCircuit : m.shareBoxHintInsignia}
+        {kind === "circuit"
+          ? m.shareBoxHintCircuit
+          : kind === "deck"
+            ? m.shareBoxHintDeck
+            : kind === "pet"
+              ? m.shareBoxHintPet
+              : m.shareBoxHintInsignia}
       </p>
       <label>
         {m.schemeString}
@@ -119,7 +129,11 @@ export function SchemeShareBox({
           placeholder={
             kind === "circuit"
               ? m.shareBoxPlaceholderCircuit
-              : m.shareBoxPlaceholderInsignia
+              : kind === "deck"
+                ? m.shareBoxPlaceholderDeck
+                : kind === "pet"
+                  ? m.shareBoxPlaceholderPet
+                  : m.shareBoxPlaceholderInsignia
           }
           onChange={(e) => setDraft(e.target.value)}
         />
@@ -160,11 +174,13 @@ type ProfileSchemeShareBoxProps = {
   onExportInsignia: () => Promise<string>;
   canExportDeck?: boolean;
   onExportDeck?: () => Promise<string>;
+  canExportPet?: boolean;
+  onExportPet?: () => Promise<string>;
   onImport: (code: string) => Promise<void>;
   onStatus: (msg: string) => void;
 };
 
-/** Import / export circuit + insignia + deck schemes onto the current character profile. */
+/** Import / export circuit + insignia + deck + pet schemes onto the current character profile. */
 export function ProfileSchemeShareBox({
   canExportCircuit,
   canExportInsignia,
@@ -172,6 +188,8 @@ export function ProfileSchemeShareBox({
   onExportInsignia,
   canExportDeck = false,
   onExportDeck,
+  canExportPet = false,
+  onExportPet,
   onImport,
   onStatus,
 }: ProfileSchemeShareBoxProps) {
@@ -179,7 +197,7 @@ export function ProfileSchemeShareBox({
   const [draft, setDraft] = useState("");
   const [lastExported, setLastExported] = useState("");
   const [busy, setBusy] = useState<
-    "circuit" | "insignia" | "deck" | "import" | null
+    "circuit" | "insignia" | "deck" | "pet" | "import" | null
   >(null);
 
   async function copyText(text: string): Promise<boolean> {
@@ -192,7 +210,7 @@ export function ProfileSchemeShareBox({
   }
 
   async function handleExport(
-    kind: "circuit" | "insignia" | "deck",
+    kind: "circuit" | "insignia" | "deck" | "pet",
     run: () => Promise<string>,
   ): Promise<void> {
     if (busy) return;
@@ -279,6 +297,17 @@ export function ProfileSchemeShareBox({
               onClick={() => void handleExport("deck", onExportDeck)}
             >
               {busy === "deck" ? m.exporting : m.exportDeck}
+            </button>
+          ) : null}
+          {onExportPet ? (
+            <button
+              type="button"
+              className="secondary"
+              disabled={!canExportPet || busy !== null}
+              title={canExportPet ? m.exportPetTitle : m.noPetOnThis}
+              onClick={() => void handleExport("pet", onExportPet)}
+            >
+              {busy === "pet" ? m.exporting : m.exportPet}
             </button>
           ) : null}
         </div>

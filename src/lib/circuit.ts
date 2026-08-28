@@ -83,6 +83,7 @@ export const CIRCUIT_STAT_LABEL: Record<CircuitStatKey, string> = {
   statusDamage: "異常傷害",
   strInt: "力量智力",
   agiSpr: "敏捷精神",
+  additionalDamage: "附加傷害",
 };
 
 /** Stats entered/displayed as percentages. */
@@ -101,6 +102,7 @@ export const CIRCUIT_PERCENT_STATS = new Set<CircuitStatKey>([
   "statusDamage",
   "strInt",
   "agiSpr",
+  "additionalDamage",
 ]);
 
 /** 冰/火/電/暗：以屬強點數計入 (1+屬強/220)。 */
@@ -149,13 +151,14 @@ export const CIRCUIT_BREAK_STATS: CircuitStatKey[] = [
   "agiSpr",
   "hp",
   "attack",
+  "additionalDamage",
 ];
 
 export const CIRCUIT_MAIN_STATS: Record<CircuitKind, CircuitStatKey[]> = {
   time: ["critRate", "critDamage"],
   nether: ["hp"],
-  star: ["skillDamage", "ice", "fire", "electric", "dark"],
-  key: ["attack"],
+  star: ["skillDamage", "ice", "fire", "electric", "dark", "allElementDamage", "additionalDamage"],
+  key: ["attack", "allElementDamage", "additionalDamage"],
 };
 
 export const CIRCUIT_SLOT_DEFS: Array<{
@@ -294,6 +297,7 @@ const ELEMENT_STAT_TO_KEY: Record<CircuitStatKey, CircuitElement | undefined> = 
   statusDamage: undefined,
   strInt: undefined,
   agiSpr: undefined,
+  additionalDamage: undefined,
 };
 
 export type CircuitExtraStats = {
@@ -372,6 +376,9 @@ export function applyCircuitAffix(
       return;
     case "allElementDamage":
       addToBag(bag, "allElementDamage", value);
+      return;
+    case "additionalDamage":
+      addToBag(bag, "additionalDamage", value);
       return;
     case "elementalPower":
       addToBag(bag, "elementalPower", value);
@@ -702,6 +709,7 @@ export function contributionLines(
   pushBag("skillDamage", circuitStatLabel("skillDamage"), true);
   pushBag("circuitBoost", circuitStatLabel("circuitBoost"), true);
   pushBag("allElementDamage", circuitStatLabel("allElementDamage"), true);
+  pushBag("additionalDamage", circuitStatLabel("additionalDamage"), true);
   pushBag("elementalPower", circuitStatLabel("elementalPower"), false);
   pushBag("damageBoost", circuitStatLabel("damageBoost"), true);
   pushBag("bossDamage", circuitStatLabel("bossDamage"), true);

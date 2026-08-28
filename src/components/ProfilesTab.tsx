@@ -41,6 +41,10 @@ import {
   schemeContribution as deckSchemeContribution,
 } from "../lib/deck";
 import {
+  equippedCount as petEquippedCount,
+  schemeContribution as petSchemeContribution,
+} from "../lib/pet";
+import {
   circuitElementLabel,
   insigniaRarityLabel,
   professionNameLabel,
@@ -123,10 +127,14 @@ export function ProfilesTab() {
     exportActiveProfileCircuitScheme,
     exportActiveProfileInsigniaScheme,
     exportActiveProfileDeckScheme,
+    exportActiveProfilePetScheme,
     importSchemeOntoActiveProfile,
     deckSchemes,
     deckSchemesById,
     decksById,
+    petsById,
+    petSchemes,
+    petSchemesById,
     editorPanelRef,
   } = useAppStore();
 
@@ -171,11 +179,25 @@ export function ProfilesTab() {
         activeProfile?.element ?? "all",
       )
     : null;
+  const activePetScheme = activeProfile?.petSchemeId
+    ? petSchemesById.get(activeProfile.petSchemeId)
+    : undefined;
+  const activePetContrib = activePetScheme
+    ? petSchemeContribution(
+        activePetScheme,
+        petsById,
+        activeProfile?.element ?? "all",
+      )
+    : null;
+  const activePetLines = activePetContrib
+    ? insigniaContributionLines(activePetContrib)
+    : null;
   const activeSchemeBonuses = bagToStatBonuses(
     mergeStatBags([
       ...(activeCircuitContrib ? [activeCircuitContrib.bag] : []),
       ...(activeInsigniaContrib ? [activeInsigniaContrib.bag] : []),
       ...(activeDeckContrib ? [activeDeckContrib.bag] : []),
+      ...(activePetContrib ? [activePetContrib.bag] : []),
     ]),
     activeProfile?.damageType ?? "magic",
   );
@@ -598,25 +620,43 @@ export function ProfilesTab() {
                   ))}
                 </select>
               </label>
-              <label>
-                {m.deckScheme}
-                <select
-                  value={activeProfile.deckSchemeId ?? ""}
-                  onChange={(e) =>
-                    updateProfile(activeProfile.id, {
-                      deckSchemeId: e.target.value || null,
-                    })
-                  }
-                >
-                  <option value="">{m.noDeckScheme}</option>
-                  {deckSchemes.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {m.schemeCount(s.name, deckEquippedCount(s))}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
+                <label>
+                  {m.deckScheme}
+                  <select
+                    value={activeProfile.deckSchemeId ?? ""}
+                    onChange={(e) =>
+                      updateProfile(activeProfile.id, {
+                        deckSchemeId: e.target.value || null,
+                      })
+                    }
+                  >
+                    <option value="">{m.noDeckScheme}</option>
+                    {deckSchemes.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {m.schemeCount(s.name, deckEquippedCount(s))}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  {m.petScheme}
+                  <select
+                    value={activeProfile.petSchemeId ?? ""}
+                    onChange={(e) =>
+                      updateProfile(activeProfile.id, {
+                        petSchemeId: e.target.value || null,
+                      })
+                    }
+                  >
+                    <option value="">{m.noPetScheme}</option>
+                    {petSchemes.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {m.schemeCount(s.name, petEquippedCount(s))}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
 
             <ProfileSchemeShareBox
               canExportCircuit={!!activeProfile.circuitSchemeId}
@@ -625,6 +665,8 @@ export function ProfilesTab() {
               onExportInsignia={exportActiveProfileInsigniaScheme}
               canExportDeck={!!activeProfile.deckSchemeId}
               onExportDeck={exportActiveProfileDeckScheme}
+              canExportPet={!!activeProfile.petSchemeId}
+              onExportPet={exportActiveProfilePetScheme}
               onImport={importSchemeOntoActiveProfile}
               onStatus={setStatus}
             />
@@ -768,6 +810,31 @@ export function ProfilesTab() {
             ) : (
               <p className="muted small">
                 {m.noInsigniaApplied}
+              </p>
+            )}
+
+            <h3 className="section-title">{m.petScheme}</h3>
+            {activePetScheme && activePetLines ? (
+              <div className="circuit-profile-summary">
+                <p className="muted small">
+                  {m.currentScheme(
+                    activePetScheme.name,
+                    petEquippedCount(activePetScheme),
+                  )}
+                </p>
+                {activePetLines.damage.length > 0 ? (
+                  <ul className="stat-lines">
+                    {activePetLines.damage.map((line) => (
+                      <li key={line}>{line}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="muted small">{m.schemeNoDamage}</p>
+                )}
+              </div>
+            ) : (
+              <p className="muted small">
+                {m.noPetOnProfile}
               </p>
             )}
 

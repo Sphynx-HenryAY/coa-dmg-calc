@@ -64,7 +64,8 @@
     "bossDamage": "Boss DMG",
     "statusDamage": "Status DMG",
     "strInt": "STR/INT",
-    "agiSpr": "AGI/SPR"
+    "agiSpr": "AGI/SPR",
+    "additionalDamage": "Bonus DMG"
   },
   "insigniaRarity": {
     "epic": "Epic",
@@ -96,7 +97,9 @@
     "int": "INT",
     "otherworld": "Otherworld DMG",
     "resonanceCharge": "Resonance Charge",
-    "petDamage": "Pet Damage"
+    "petDamage": "Pet Damage",
+    "allElementDamage": "All Elem. DMG",
+    "additionalDamage": "Bonus DMG"
   },
   "slot": {
     "頭": "Head",
@@ -692,7 +695,12 @@
         "name"
       ]
     },
-    "sockets11": "11 sockets",
+    "socketsLabel": {
+      "tpl": "{n} sockets",
+      "args": [
+        "n"
+      ]
+    },
     "unsocketed": "— Empty —",
     "moveHere": " (move here)",
     "subCount": {
@@ -932,8 +940,8 @@
     "shareBoxHintInsignia": "Export the current scheme (including socketed insignias) as a compressed string. Import adds a new scheme and applies it to the current character. Damage uses that character’s own gear and stats; it does not overwrite their base.",
     "shareBoxPlaceholderCircuit": "Paste a COA-CS1… string, or click Export string",
     "shareBoxPlaceholderInsignia": "Paste a COA-IS1… string, or click Export string",
-    "profileShareHint": "Paste a teammate’s circuit or insignia string to add the scheme and apply it to this build. Damage uses this character’s current base, gear, and items. It does not rewrite anyone’s character stats.",
-    "profileSharePlaceholder": "Paste a string starting with COA-CS1 or COA-IS1",
+    "profileShareHint": "Paste a teammate’s circuit, insignia, deck, or pet string to add the scheme and apply it to this build. Damage uses this character’s current base, gear, and items. It does not rewrite anyone’s character stats.",
+    "profileSharePlaceholder": "Paste a string starting with COA-CS1, COA-IS1, COA-DS1, or COA-PS1",
     "copiedKind": {
       "tpl": "Copied {kind} string ({n} chars)",
       "args": [
@@ -1302,7 +1310,108 @@
         "profile"
       ]
     },
-    "badDeckCode": "Invalid deck scheme code"
+    "badDeckCode": "Invalid deck scheme code",
+    "tabPets": "Pets",
+    "tabPetsShort": "Pets",
+    "petScheme": "Pet Scheme",
+    "noPetScheme": "None",
+    "petSchemeWord": "Pet Scheme",
+    "petLib": "Pet Library",
+    "allPets": "All Pets",
+    "noPets": "No pets yet — add your first pet.",
+    "searchPets": "Search pets",
+    "petSchemes": "Pet Schemes",
+    "petSchemeHint": "Equip up to 2 pets; each adds its bonuses to the build.",
+    "noPetSchemes": "No pet schemes yet.",
+    "petGainTitle": "Pet Gains",
+    "petGainHintWith": "Damage gain from the equipped pet scheme.",
+    "petGainHintEmpty": "Equip or pick a pet scheme to see gains.",
+    "editPet": "Edit Pet",
+    "addPet": "Add Pet",
+    "petFormHint": "A pet provides stat bonuses. Add up to 6 effects.",
+    "autoNamePetPh": "Auto-named from pet name",
+    "petAffixHint": "Each pet's effects are added when equipped.",
+    "petNotePh": "e.g. source, uncapped skill level",
+    "deckNotePh": "e.g. source, uncounted deck effect",
+    "previewNoPet": "No pet equipped",
+    "previewPetGain": "With pet",
+    "noPetDamage": "No pet contribution yet — socket pets into the 2 slots above to see their damage bonus.",
+    "notSocketedPet": "No pet socketed yet. Once a pet is placed in a slot, its individual damage contribution shows here.",
+    "noneForPetSlot": "No pets available in the library",
+    "addedPetScheme": "Pet scheme added",
+    "copiedPetScheme": "Pet scheme copied",
+    "deletedPetScheme": "Pet scheme deleted",
+    "updatedPet": {
+      "tpl": "Pet '{name}' updated",
+      "args": [
+        "name"
+      ]
+    },
+    "addedPet": {
+      "tpl": "Pet '{name}' added",
+      "args": [
+        "name"
+      ]
+    },
+    "deletedPet": {
+      "tpl": "Pet '{name}' deleted",
+      "args": [
+        "name"
+      ]
+    },
+    "copiedPet": {
+      "tpl": "Pet '{name}' copied",
+      "args": [
+        "name"
+      ]
+    },
+    "pickProfilePetCompare": "Pick a profile to compare pet gains",
+    "addPetToCompare": "Add a pet to the library to compare gains",
+    "petCodeWrongTab": "This pet code belongs to the Pets tab.",
+    "exportPet": "Export Pet",
+    "exportPetTitle": "Copy the active pet scheme as a share code",
+    "noPetOnThis": "No pet scheme on this profile",
+    "noPetOnProfile": "No pet scheme on the active profile",
+    "importedPet": {
+      "tpl": "Imported pet scheme '{name}' onto profile '{profile}'",
+      "args": [
+        "name",
+        "profile"
+      ]
+    },
+    "badPetCode": "Invalid pet scheme code",
+    "shareBoxHintPet": "Export this profile's equipped pet scheme as a compressed string. Importing adds the scheme and applies it to this character, using their own gear and stats.",
+    "shareBoxPlaceholderPet": "Paste a pet scheme string (COA-PS1…)",
+    "shareBoxHintDeck": "Export the current deck scheme (including socketed cards) as a compressed string. Import adds a new scheme and applies it to the current character. Damage uses that character’s own gear and stats; it does not overwrite their base.",
+    "shareBoxPlaceholderDeck": "Paste a COA-DS1… string, or click Export string",
+    "tabRankings": "Damage Rankings",
+    "tabRankingsShort": "Rank",
+    "rankTitle": "Damage Rankings",
+    "rankHint": "Enter a name and the 90-second training-ground total damage. Sorted from highest to lowest.",
+    "rankName": "Name",
+    "rankNamePh": "e.g. Teammate A",
+    "rankDamage": "90s Training Damage",
+    "rankDamagePh": "e.g. 123456789",
+    "rankAdd": "Add Entry",
+    "rankNoEntries": "No entries yet — add the first one.",
+    "rankRank": "Rank",
+    "rankPerSecond": "/ sec",
+    "rankDps": "DPS",
+    "rankEdit": "Edit",
+    "rankDelete": "Delete",
+    "rankCancel": "Cancel",
+    "rankSave": "Save",
+    "rankConfirmDelete": {
+      "tpl": "Delete {name}'s entry?",
+      "args": [
+        "name"
+      ]
+    },
+    "rankAdded": "Entry added",
+    "rankUpdated": "Entry updated",
+    "rankDeleted": "Entry deleted",
+    "rankNeedName": "Please enter a name",
+    "rankNeedDamage": "Please enter the 90s training damage"
   },
   "meta": {
     "htmlLang": "en",

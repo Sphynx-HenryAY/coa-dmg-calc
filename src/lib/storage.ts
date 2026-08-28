@@ -7,9 +7,12 @@ import type {
   Equipment,
   InsigniaPiece,
   InsigniaScheme,
+  PetPiece,
+  PetScheme,
   ProfessionDef,
   ProfessionOverride,
   Profile,
+  RankEntry,
 } from "./types";
 import { activeSourceIdsOf } from "./types";
 import demoData from "../data/demoData.json";
@@ -21,6 +24,7 @@ import {
   normalizeInsigniaScheme,
 } from "./insignia";
 import { normalizeDeckPiece, normalizeDeckScheme } from "./deck";
+import { normalizePetPiece, normalizePetScheme } from "./pet";
 import {
   normalizeCustomProfession,
   normalizeProfessionOverride,
@@ -48,6 +52,12 @@ export type PersistedState = {
   hiddenItemIds: string[];
   compareIds: string[];
   activeProfileId: string | null;
+  /** 90-second training-ground damage leaderboard entries. */
+  rankEntries: RankEntry[];
+  /** Pet library (creatures with stat affixes). */
+  pets: PetPiece[];
+  /** Pet loadout schemes (up to 2 pets each). */
+  petSchemes: PetScheme[];
 };
 
 export function getDemoEquipment(): Equipment[] {
@@ -75,6 +85,9 @@ function emptyPersistedState(): PersistedState {
     hiddenItemIds: [],
     compareIds: [],
     activeProfileId: null,
+    rankEntries: [],
+    pets: [],
+    petSchemes: [],
   };
 }
 
@@ -139,6 +152,18 @@ export function loadState(): PersistedState {
       hiddenItemIds: parsed.hiddenItemIds ?? [],
       compareIds: parsed.compareIds ?? [],
       activeProfileId: parsed.activeProfileId ?? parsed.profiles[0]?.id ?? null,
+      rankEntries: Array.isArray(parsed.rankEntries)
+        ? parsed.rankEntries.filter(
+            (e): e is RankEntry =>
+              !!e && typeof e.name === "string" && typeof e.damage === "number",
+          )
+        : [],
+      pets: (parsed.pets ?? [])
+        .map(normalizePetPiece)
+        .filter((x): x is PetPiece => x !== null),
+      petSchemes: (parsed.petSchemes ?? [])
+        .map(normalizePetScheme)
+        .filter((x): x is PetScheme => x !== null),
     };
   } catch {
     return emptyPersistedState();
@@ -164,6 +189,9 @@ export function saveState(state: PersistedState): void {
       hiddenItemIds: state.hiddenItemIds,
       compareIds: state.compareIds,
       activeProfileId: state.activeProfileId,
+      rankEntries: state.rankEntries,
+      pets: state.pets,
+      petSchemes: state.petSchemes,
     }),
   );
 }

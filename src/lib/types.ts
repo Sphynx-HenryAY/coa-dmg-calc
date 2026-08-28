@@ -179,7 +179,8 @@ export type CircuitStatKey =
   | "bossDamage"
   | "statusDamage"
   | "strInt"
-  | "agiSpr";
+  | "agiSpr"
+  | "additionalDamage";
 
 export type CircuitAffix = {
   stat: CircuitStatKey;
@@ -239,6 +240,29 @@ export type DeckScheme = {
   updatedAt: string;
 };
 
+/** A pet loadout holds up to 2 pets. */
+export type PetSlotId = "1" | "2";
+
+/** A pet: reuses insignia-style stat affixes for its damage bonuses. */
+export type PetPiece = {
+  id: string;
+  name: string;
+  affixes: InsigniaAffix[];
+  note: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+/** A 2-slot pet loadout. Profiles pick one as the active pet set. */
+export type PetScheme = {
+  id: string;
+  name: string;
+  note: string;
+  equipped: Partial<Record<PetSlotId, string | null>>;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type InsigniaRank = 1 | 2 | 3;
 
 export type InsigniaStatKey =
@@ -267,7 +291,9 @@ export type InsigniaStatKey =
   | "int"
   | "otherworld"
   | "resonanceCharge"
-  | "petDamage";
+  | "petDamage"
+  | "allElementDamage"
+  | "additionalDamage";
 
 export type InsigniaAffix = {
   stat: InsigniaStatKey;
@@ -341,6 +367,8 @@ export type Profile = {
   insigniaSchemeId?: string | null;
   /** Active deck scheme id. */
   deckSchemeId?: string | null;
+  /** Active pet scheme id. */
+  petSchemeId?: string | null;
   /** Active advanced class. Cycle comes from the profession catalog. */
   professionId?: ProfessionId | null;
   /**
@@ -392,6 +420,16 @@ export type AppStore = {
  * canonical `equipped`/`itemIds` fields. Used by the unified StatSource
  * damage path (enforcing at most one gear per slot).
  */
+/** A single entry on the 90-second training-ground damage leaderboard. */
+export type RankEntry = {
+  id: string;
+  name: string;
+  /** Total damage dealt in a 90-second training-ground run. */
+  damage: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export function activeSourceIdsOf(profile: Profile): string[] {
   const ids: string[] = [];
   const seen = new Set<string>();

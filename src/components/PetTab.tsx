@@ -1,46 +1,46 @@
 import { useMemo } from "react";
 import type {
-  DeckPiece,
-  DeckScheme,
-  DeckSlotId,
   InsigniaStatKey,
+  PetPiece,
+  PetScheme,
+  PetSlotId,
 } from "../lib/types";
 import { formatSignedDamage, formatSignedRatio, gainClass } from "../lib/format";
 import {
-  DECK_PERCENT_STATS,
-  DECK_SLOT_IDS,
-  DECK_STAT_OPTIONS,
-  assignDeckToSlot,
-  blankDeckPiece,
-  blankDeckScheme,
+  PET_PERCENT_STATS,
+  PET_SLOT_IDS,
+  PET_STAT_OPTIONS,
+  assignPetToSlot,
+  blankPetPiece,
+  blankPetScheme,
   canSocketIn,
-  compareSchemeDecks,
+  compareSchemePets,
   contributionLines,
-  deckStatLabel,
-  defaultDeckName,
-  detachDecksFromSchemes,
+  defaultPetName,
+  detachPetsFromSchemes,
   equippedCount,
-  formatDeckAffix,
+  formatPetAffix,
+  petStatLabel,
   schemeContribution,
-} from "../lib/deck";
+} from "../lib/pet";
 import { type LoadoutSlotGain, type LoadoutSwapGain } from "../lib/loadout";
 import { type AffixDraft } from "./forms";
 import { type LoadoutConfig, LoadoutTab } from "./LoadoutTab";
-import { encodeDeckSchemeCode } from "../lib/schemeShare";
+import { encodePetSchemeCode } from "../lib/schemeShare";
 import { useI18n } from "../lib/I18nProvider";
 import { useAppStore } from "../store/AppStore";
 
-type DeckAffixDraft = AffixDraft<string>;
+type PetAffixDraft = AffixDraft<string>;
 
 const AFFIX_ROW_COUNT = 6;
 
-type DeckDraft = {
+type PetDraft = {
   name: string;
   note: string;
-  affixes: DeckAffixDraft[];
+  affixes: PetAffixDraft[];
 };
 
-function emptyAffixRows(): DeckAffixDraft[] {
+function emptyAffixRows(): PetAffixDraft[] {
   return Array.from({ length: AFFIX_ROW_COUNT }, () => ({
     stat: "",
     value: 0,
@@ -48,8 +48,8 @@ function emptyAffixRows(): DeckAffixDraft[] {
 }
 
 function fillAffixRows(
-  list: DeckPiece["affixes"] | undefined,
-): DeckAffixDraft[] {
+  list: PetPiece["affixes"] | undefined,
+): PetAffixDraft[] {
   const next = emptyAffixRows();
   (list ?? []).slice(0, AFFIX_ROW_COUNT).forEach((affix, i) => {
     next[i] = { stat: affix.stat, value: affix.value };
@@ -58,7 +58,7 @@ function fillAffixRows(
 }
 
 function cleanAffixRows(
-  rows: DeckAffixDraft[],
+  rows: PetAffixDraft[],
 ): Array<{ stat: InsigniaStatKey; value: number }> {
   return rows
     .filter((s): s is { stat: InsigniaStatKey; value: number } => {
@@ -69,70 +69,70 @@ function cleanAffixRows(
     .map((r) => ({ stat: r.stat as InsigniaStatKey, value: r.value }));
 }
 
-export function DeckTab() {
+export function PetTab() {
   const { m } = useI18n();
   const {
-    decks,
-    deckSchemes: schemes,
-    setDecks,
-    setDeckSchemes: setSchemes,
+    pets,
+    petSchemes: schemes,
+    setPets,
+    setPetSchemes: setSchemes,
     activeProfile,
     setStatus: onStatus,
-    importDeckSchemeFromCode: onImportShareCode,
+    importPetSchemeFromCode: onImportShareCode,
     profileResult,
     updateProfile,
   } = useAppStore();
 
-  const decksById = useMemo(() => {
-    const map = new Map<string, DeckPiece>();
-    for (const p of decks) map.set(p.id, p);
+  const petsById = useMemo(() => {
+    const map = new Map<string, PetPiece>();
+    for (const p of pets) map.set(p.id, p);
     return map;
-  }, [decks]);
+  }, [pets]);
 
-  function duplicatePiece(piece: DeckPiece): void {
-    const copy: DeckPiece = {
+  function duplicatePiece(piece: PetPiece): void {
+    const copy: PetPiece = {
       ...structuredClone(piece),
-      id: blankDeckPiece().id,
-      name: `${piece.name || defaultDeckName(piece)}${m.copiedSuffix}`,
+      id: blankPetPiece().id,
+      name: `${piece.name || defaultPetName(piece)}${m.copiedSuffix}`,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    setDecks((list) => [copy, ...list]);
-    onStatus(m.copiedDeck(copy.name));
+    setPets((list) => [copy, ...list]);
+    onStatus(m.copiedPet(copy.name));
   }
 
   const config: LoadoutConfig<
-    DeckPiece,
-    DeckScheme,
-    DeckSlotId,
+    PetPiece,
+    PetScheme,
+    PetSlotId,
     InsigniaStatKey,
-    DeckDraft,
+    PetDraft,
     ReturnType<typeof schemeContribution>["extra"],
-    ReturnType<typeof compareSchemeDecks>
+    ReturnType<typeof compareSchemePets>
   > = {
-    formTitle: (editing) => (editing ? m.editDeck : m.addDeck),
-    formHint: m.deckFormHint,
-    addLabel: m.addDeck,
-    namePlaceholder: m.autoNameDeckPh,
-    libTitle: m.deckLib,
-    libraryTitle: m.allDecks,
-    noLibMsg: m.noDecks,
-    searchPlaceholder: m.searchDecks,
-    schemesTitle: m.deckSchemes,
-    schemesHint: m.deckSchemeHint,
-    noSchemesMsg: m.noDeckSchemes,
+    formTitle: (editing) => (editing ? m.editPet : m.addPet),
+    formHint: m.petFormHint,
+    addLabel: m.addPet,
+    namePlaceholder: m.autoNamePetPh,
+    libTitle: m.petLib,
+    libraryTitle: m.allPets,
+    noLibMsg: m.noPets,
+    searchPlaceholder: m.searchPets,
+    schemesTitle: m.petSchemes,
+    schemesHint: m.petSchemeHint,
+    noSchemesMsg: m.noPetSchemes,
     schemes: schemes,
-    pieces: decks,
-    piecesById: decksById,
-    contribEmptyMsg: m.noDeckDamage,
-    schemeShareKind: "deck",
-    gainTitle: m.deckGainTitle,
-    gainHintWith: m.deckGainHintWith,
-    gainHintEmpty: m.deckGainHintEmpty,
+    pieces: pets,
+    piecesById: petsById,
+    contribEmptyMsg: m.noPetDamage,
+    schemeShareKind: "pet",
+    gainTitle: m.petGainTitle,
+    gainHintWith: m.petGainHintWith,
+    gainHintEmpty: m.petGainHintEmpty,
     equippedHeader: m.equippedSection,
-    emptyHint: m.notSocketedYet,
-    previewNoLabel: m.previewNoDeck,
-    previewGainLabel: m.previewDeckGain,
+    emptyHint: m.notSocketedPet,
+    previewNoLabel: m.previewNoPet,
+    previewGainLabel: m.previewPetGain,
 
     blankDraft: () => ({
       name: "",
@@ -146,18 +146,18 @@ export function DeckTab() {
     }),
     onSave: (draft, editingId) => {
       const cleaned = cleanAffixRows(draft.affixes);
-      const draft2: DeckPiece = {
-        id: editingId ?? blankDeckPiece().id,
+      const draft2: PetPiece = {
+        id: editingId ?? blankPetPiece().id,
         name: draft.name.trim(),
         affixes: cleaned,
         note: draft.note.trim(),
         createdAt:
-          decks.find((p) => p.id === editingId)?.createdAt ??
+          pets.find((p) => p.id === editingId)?.createdAt ??
           new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
-      if (!draft2.name) draft2.name = defaultDeckName(draft2);
-      setDecks((list) => {
+      if (!draft2.name) draft2.name = defaultPetName(draft2);
+      setPets((list) => {
         const idx = list.findIndex((p) => p.id === draft2.id);
         if (idx >= 0) {
           const next = [...list];
@@ -167,19 +167,18 @@ export function DeckTab() {
         return [draft2, ...list];
       });
       onStatus(
-        editingId ? m.updatedDeck(draft2.name) : m.addedDeck(draft2.name),
+        editingId ? m.updatedPet(draft2.name) : m.addedPet(draft2.name),
       );
     },
     getName: (d) => d.name,
     setName: (d, name) => ({ ...d, name }),
     deletePiece: (id) => {
-      const piece = decksById.get(id);
-      setDecks((list) => list.filter((p) => p.id !== id));
-      setSchemes((list) => detachDecksFromSchemes(list, new Set([id])));
-      onStatus(m.deletedDeck(piece?.name || id));
+      const piece = petsById.get(id);
+      setPets((list) => list.filter((p) => p.id !== id));
+      setSchemes((list) => detachPetsFromSchemes(list, new Set([id])));
+      onStatus(m.deletedPet(piece?.name || id));
     },
-    exportActiveScheme: (scheme) =>
-      encodeDeckSchemeCode(scheme, decksById),
+    exportActiveScheme: (scheme) => encodePetSchemeCode(scheme, petsById),
     onImportShareCode,
     renderFields: (draft, setDraft) => (
       <>
@@ -187,13 +186,11 @@ export function DeckTab() {
           {m.note}
           <input
             value={draft.note}
-            onChange={(e) =>
-              setDraft((d) => ({ ...d, note: e.target.value }))
-            }
-            placeholder={m.deckNotePh}
+            onChange={(e) => setDraft((d) => ({ ...d, note: e.target.value }))}
+            placeholder={m.petNotePh}
           />
         </label>
-        <p className="muted small">{m.deckAffixHint}</p>
+        <p className="muted small">{m.petAffixHint}</p>
       </>
     ),
     affixBlocks: [
@@ -201,9 +198,9 @@ export function DeckTab() {
         title: m.effectsMax6,
         hint: m.effectsHint,
         rowLabel: m.subStat,
-        options: DECK_STAT_OPTIONS as string[],
-        percentSet: DECK_PERCENT_STATS as Set<string>,
-        labelFor: (s) => deckStatLabel(s as InsigniaStatKey),
+        options: PET_STAT_OPTIONS as string[],
+        percentSet: PET_PERCENT_STATS as Set<string>,
+        labelFor: (s) => petStatLabel(s as InsigniaStatKey),
         suffixFor: (s) =>
           s === "elementalPower" ||
           s === "ice" ||
@@ -218,7 +215,7 @@ export function DeckTab() {
       },
     ],
 
-    pieceStatLines: (piece) => piece.affixes.map((a) => formatDeckAffix(a)),
+    pieceStatLines: (piece) => piece.affixes.map((a) => formatPetAffix(a)),
     cardPills: () => null,
     cardCanSocket: () => "",
     cardNote: (piece) => piece.note || undefined,
@@ -236,12 +233,8 @@ export function DeckTab() {
       const q = ctx.search.trim().toLowerCase();
       const list = pieces.filter((p) => {
         if (!q) return true;
-        const label = (p.name || defaultDeckName(p)).toLowerCase();
-        const hay = [
-          label,
-          ...p.affixes.map((a) => a.stat),
-          p.note,
-        ]
+        const label = (p.name || defaultPetName(p)).toLowerCase();
+        const hay = [label, ...p.affixes.map((a) => a.stat), p.note]
           .join(" ")
           .toLowerCase();
         return hay.includes(q);
@@ -259,40 +252,38 @@ export function DeckTab() {
     },
 
     schemeOptionLabel: (scheme) =>
-      `${scheme.name}（${equippedCount(scheme)}/4）`,
+      `${scheme.name}（${equippedCount(scheme)}/2）`,
     isApplied: (profile, schemeId) =>
-      !!profile && profile.deckSchemeId === schemeId,
-    getProfileSchemeId: (profile) => profile?.deckSchemeId ?? null,
+      !!profile && profile.petSchemeId === schemeId,
+    getProfileSchemeId: (profile) => profile?.petSchemeId ?? null,
     applyToProfile: (schemeId) => {
       if (!activeProfile) {
         onStatus(m.pickProfileFirst);
         return;
       }
-      updateProfile(activeProfile.id, { deckSchemeId: schemeId });
+      updateProfile(activeProfile.id, { petSchemeId: schemeId });
     },
     addScheme: () => {
-      const scheme = blankDeckScheme(
-        m.defaultSchemeName(schemes.length + 1),
-      );
+      const scheme = blankPetScheme(m.defaultSchemeName(schemes.length + 1));
       setSchemes((list) => [scheme, ...list]);
-      onStatus(m.addedDeckScheme);
+      onStatus(m.addedPetScheme);
       return scheme.id;
     },
     duplicateScheme: (scheme) => {
-      const copy: DeckScheme = {
+      const copy: PetScheme = {
         ...structuredClone(scheme),
-        id: blankDeckScheme().id,
+        id: blankPetScheme().id,
         name: `${scheme.name}${m.copiedSuffix}`,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
       setSchemes((list) => [copy, ...list]);
-      onStatus(m.copiedDeckScheme);
+      onStatus(m.copiedPetScheme);
       return copy.id;
     },
     deleteScheme: (id) => {
       setSchemes((list) => list.filter((s) => s.id !== id));
-      onStatus(m.deletedDeckScheme);
+      onStatus(m.deletedPetScheme);
     },
     patchScheme: (id, patch) => {
       setSchemes((list) =>
@@ -308,15 +299,13 @@ export function DeckTab() {
       schemeContribution(scheme, piecesById, element),
     contributionLines: (contrib) => contributionLines(contrib),
     computeComparison: (scheme, profile) => {
-      if (!profile || decks.length === 0) return null;
-      const scheme2 = scheme ?? blankDeckScheme(m.emptySchemeName);
-      return compareSchemeDecks(
+      if (!profile || pets.length === 0) return null;
+      const scheme2 = scheme ?? blankPetScheme(m.emptySchemeName);
+      return compareSchemePets(
         scheme2,
-        decks,
-        decksById,
-        (next) =>
-          profileResult(profile, undefined, undefined, undefined, next)
-            .finalDamage,
+        pets,
+        petsById,
+        (next) => profileResult(profile, undefined, undefined, undefined, next).finalDamage,
       );
     },
     computePreview: (scheme, profile) => ({
@@ -328,21 +317,19 @@ export function DeckTab() {
     gainFallback: (profile, activeScheme) =>
       !profile ? (
         <p className="muted small">
-          {activeScheme ? m.pickProfileDeckCompare : m.soloBeforeScheme}
+          {activeScheme ? m.pickProfilePetCompare : m.soloBeforeScheme}
         </p>
-      ) : activeScheme && decks.length === 0 ? (
-        <p className="muted small">{m.addDeckToCompare}</p>
+      ) : activeScheme && pets.length === 0 ? (
+        <p className="muted small">{m.addPetToCompare}</p>
       ) : null,
 
-    slotDefs: DECK_SLOT_IDS.map((id) => ({ id })),
+    slotDefs: PET_SLOT_IDS.map((id) => ({ id })),
     slotFilledClass: (current) => (current ? "filled" : ""),
     slotPill: () => null,
     slotOptions: (slot, currentId, ctx) => {
       const slotGains = ctx.comparison?.bySlot.get(slot) ?? [];
-      const gainByPieceId = new Map(
-        slotGains.map((g) => [g.pieceId, g]),
-      );
-      const options = decks
+      const gainByPieceId = new Map(slotGains.map((g) => [g.pieceId, g]));
+      const options = pets
         .filter((p) => canSocketIn(p, slot) || p.id === currentId)
         .sort((a, b) => {
           if (a.id === currentId) return -1;
@@ -361,7 +348,7 @@ export function DeckTab() {
             : "";
         return {
           id: p.id,
-          label: `${p.name || defaultDeckName(p)}${gainText}`,
+          label: `${p.name || defaultPetName(p)}${gainText}`,
           gainText,
         };
       });
@@ -373,12 +360,14 @@ export function DeckTab() {
         : undefined;
       return (
         <small className="circuit-slot-main">
-          {current.affixes[0]
-            ? formatDeckAffix(current.affixes[0])
+          {current.affixes.length > 0
+            ? current.affixes.map((a, i) => (
+                <span key={i}>
+                  {i > 0 ? " · " : ""}
+                  {formatPetAffix(a)}
+                </span>
+              ))
             : m.noEffect}
-          {current.affixes.length > 1
-            ? m.moreEffects(current.affixes.length - 1)
-            : ""}
           {slotGain ? (
             <>
               {" · "}
@@ -392,11 +381,11 @@ export function DeckTab() {
       );
     },
     emptySlotHint: (_slot, optionCount) =>
-      optionCount ? m.nCanFit(optionCount) : m.noneForSlot,
+      optionCount ? m.nCanFit(optionCount) : m.noneForPetSlot,
     equipSlot: (schemeId, slot, id) => {
       setSchemes((list) =>
         list.map((s) =>
-          s.id === schemeId ? assignDeckToSlot(s, slot, id) : s,
+          s.id === schemeId ? assignPetToSlot(s, slot, id) : s,
         ),
       );
     },
@@ -404,7 +393,7 @@ export function DeckTab() {
     gainRowMeta: (row) => ({
       pillClass: "",
       pillLabel: "",
-      name: row.piece.name || defaultDeckName(row.piece),
+      name: row.piece.name || defaultPetName(row.piece),
     }),
     libraryGain: {
       rowMeta: (pieceId, piecesById) => {
@@ -412,7 +401,7 @@ export function DeckTab() {
         return {
           pillClass: "",
           pillLabel: "",
-          name: p.name || defaultDeckName(p),
+          name: p.name || defaultPetName(p),
         };
       },
     },
@@ -423,8 +412,8 @@ export function DeckTab() {
 
 function librarySortValue(
   pieceId: string,
-  equipped: Map<string, LoadoutSlotGain<DeckPiece, DeckSlotId>>,
-  swaps: Map<string, LoadoutSwapGain<DeckSlotId>>,
+  equipped: Map<string, LoadoutSlotGain<PetPiece, PetSlotId>>,
+  swaps: Map<string, LoadoutSwapGain<PetSlotId>>,
 ): number {
   const row = equipped.get(pieceId);
   if (row) return row.delta;

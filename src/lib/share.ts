@@ -10,6 +10,8 @@ import type {
   Equipment,
   InsigniaPiece,
   InsigniaScheme,
+  PetPiece,
+  PetScheme,
   ProfessionId,
   Profile,
   StatBag,
@@ -24,6 +26,7 @@ import {
   normalizeInsigniaScheme,
 } from "./insignia";
 import { normalizeDeckPiece, normalizeDeckScheme } from "./deck";
+import { normalizePetPiece, normalizePetScheme } from "./pet";
 
 export const SHARE_HASH_PREFIX = "s=";
 
@@ -40,6 +43,8 @@ export type SharePayloadFull = {
   insigniaSchemes?: InsigniaScheme[];
   decks?: DeckPiece[];
   deckSchemes?: DeckScheme[];
+  pets?: PetPiece[];
+  petSchemes?: PetScheme[];
 };
 
 /**
@@ -82,6 +87,8 @@ export type SharePayloadMultiFull = {
   insigniaSchemes?: InsigniaScheme[];
   decks?: DeckPiece[];
   deckSchemes?: DeckScheme[];
+  pets?: PetPiece[];
+  petSchemes?: PetScheme[];
 };
 
 export type SharePayload =
@@ -108,6 +115,8 @@ export type ShareImportResult = {
   insigniaSchemesToAdd: InsigniaScheme[];
   decksToAdd: DeckPiece[];
   deckSchemesToAdd: DeckScheme[];
+  petsToAdd: PetPiece[];
+  petSchemesToAdd: PetScheme[];
   unhideEquipmentIds: string[];
   unhideItemIds: string[];
 };
@@ -315,6 +324,10 @@ function normalizeProfile(raw: unknown): Profile | null {
       typeof src.deckSchemeId === "string" && src.deckSchemeId
         ? src.deckSchemeId
         : null,
+    petSchemeId:
+      typeof src.petSchemeId === "string" && src.petSchemeId
+        ? src.petSchemeId
+        : null,
     professionId: parseProfessionId(src.professionId),
     observedTrainingDamage: parseObservedDamage(src.observedTrainingDamage),
     createdAt: typeof src.createdAt === "string" ? src.createdAt : now,
@@ -407,6 +420,16 @@ export function parseSharePayload(data: unknown): SharePayload | null {
           .map(normalizeDeckScheme)
           .filter((x): x is DeckScheme => x !== null)
       : [];
+    const pets = Array.isArray(src.pets)
+      ? src.pets
+          .map(normalizePetPiece)
+          .filter((x): x is PetPiece => x !== null)
+      : [];
+    const petSchemes = Array.isArray(src.petSchemes)
+      ? src.petSchemes
+          .map(normalizePetScheme)
+          .filter((x): x is PetScheme => x !== null)
+      : [];
     return {
       v: 3,
       kind: "multi-full",
@@ -419,6 +442,8 @@ export function parseSharePayload(data: unknown): SharePayload | null {
       insigniaSchemes,
       decks,
       deckSchemes,
+      pets,
+      petSchemes,
     };
   }
 
@@ -480,6 +505,14 @@ export function parseSharePayload(data: unknown): SharePayload | null {
         .map(normalizeDeckScheme)
         .filter((x): x is DeckScheme => x !== null)
     : [];
+  const pets = Array.isArray(src.pets)
+    ? src.pets.map(normalizePetPiece).filter((x): x is PetPiece => x !== null)
+    : [];
+  const petSchemes = Array.isArray(src.petSchemes)
+    ? src.petSchemes
+        .map(normalizePetScheme)
+        .filter((x): x is PetScheme => x !== null)
+    : [];
   return {
     v: 1,
     kind: "full",
@@ -492,6 +525,8 @@ export function parseSharePayload(data: unknown): SharePayload | null {
     insigniaSchemes,
     decks,
     deckSchemes,
+    pets,
+    petSchemes,
   };
 }
 
@@ -514,6 +549,7 @@ function slimProfile(profile: Profile): Profile {
     circuitSchemeId: profile.circuitSchemeId ?? null,
     insigniaSchemeId: profile.insigniaSchemeId ?? null,
     deckSchemeId: profile.deckSchemeId ?? null,
+    petSchemeId: profile.petSchemeId ?? null,
     professionId: profile.professionId ?? null,
     observedTrainingDamage: parseObservedDamage(profile.observedTrainingDamage),
     createdAt: profile.createdAt,
@@ -531,6 +567,8 @@ function collectReferencedCatalog(
   insigniaSchemesById: Map<string, InsigniaScheme> = new Map(),
   decksById: Map<string, DeckPiece> = new Map(),
   deckSchemesById: Map<string, DeckScheme> = new Map(),
+  petsById: Map<string, PetPiece> = new Map(),
+  petSchemesById: Map<string, PetScheme> = new Map(),
 ): {
   equipment: Equipment[];
   items: CatalogItem[];
@@ -540,6 +578,8 @@ function collectReferencedCatalog(
   insigniaSchemes: InsigniaScheme[];
   decks: DeckPiece[];
   deckSchemes: DeckScheme[];
+  pets: PetPiece[];
+  petSchemes: PetScheme[];
 } {
   const equipment: Equipment[] = [];
   const seenEq = new Set<string>();
@@ -557,6 +597,10 @@ function collectReferencedCatalog(
   const seenDeck = new Set<string>();
   const deckSchemes: DeckScheme[] = [];
   const seenDeckScheme = new Set<string>();
+  const pets: PetPiece[] = [];
+  const seenPet = new Set<string>();
+  const petSchemes: PetScheme[] = [];
+  const seenPetScheme = new Set<string>();
 
   for (const profile of profiles) {
     for (const eqId of Object.values(profile.equipped)) {
@@ -685,8 +729,38 @@ function collectReferencedCatalog(
         }
       }
     }
+
+    const petSchemeId = profile.petSchemeId;
+    if (petSchemeId && !seenPetScheme.has(petSchemeId)) {
+      const scheme = petSchemesById.get(petSchemeId);
+      if (scheme) {
+        seenPetScheme.add(petSchemeId);
+        petSchemes.push({
+          id: scheme.id,
+          name: scheme.name,
+          note: scheme.note,
+          equipped: { ...scheme.equipped },
+          createdAt: scheme.createdAt,
+          updatedAt: scheme.updatedAt,
+        });
+        for (const pid of Object.values(scheme.equipped)) {
+          if (!pid || seenPet.has(pid)) continue;
+          seenPet.add(pid);
+          const piece = petsById.get(pid);
+          if (!piece) continue;
+          pets.push({
+            id: piece.id,
+            name: piece.name,
+            affixes: piece.affixes.map((a) => ({ ...a })),
+            note: piece.note,
+            createdAt: piece.createdAt,
+            updatedAt: piece.updatedAt,
+          });
+        }
+      }
+    }
   }
-  return { equipment, items, circuits, circuitSchemes, insignias, insigniaSchemes, decks, deckSchemes };
+  return { equipment, items, circuits, circuitSchemes, insignias, insigniaSchemes, decks, deckSchemes, pets, petSchemes };
 }
 
 /**
@@ -702,6 +776,8 @@ export function buildSharePayload(
   insigniaSchemesById: Map<string, InsigniaScheme> = new Map(),
   decksById: Map<string, DeckPiece> = new Map(),
   deckSchemesById: Map<string, DeckScheme> = new Map(),
+  petsById: Map<string, PetPiece> = new Map(),
+  petSchemesById: Map<string, PetScheme> = new Map(),
 ): SharePayloadFull | SharePayloadMultiFull {
   const list = (Array.isArray(profiles) ? profiles : [profiles]).map(slimProfile);
   if (list.length === 0) {
@@ -716,6 +792,8 @@ export function buildSharePayload(
     insigniaSchemes,
     decks,
     deckSchemes,
+    pets,
+    petSchemes,
   } = collectReferencedCatalog(
     list,
     equipmentById,
@@ -726,6 +804,8 @@ export function buildSharePayload(
     insigniaSchemesById,
     decksById,
     deckSchemesById,
+    petsById,
+    petSchemesById,
   );
 
   if (list.length === 1) {
@@ -741,6 +821,8 @@ export function buildSharePayload(
       insigniaSchemes,
       decks,
       deckSchemes,
+      pets,
+      petSchemes,
     };
   }
 
@@ -756,6 +838,8 @@ export function buildSharePayload(
     insigniaSchemes,
     decks,
     deckSchemes,
+    pets,
+    petSchemes,
   };
 }
 
@@ -854,6 +938,10 @@ function serializePayload(payload: SharePayload): string {
       ...(payload.deckSchemes?.length
         ? { deckSchemes: payload.deckSchemes }
         : {}),
+      ...(payload.pets?.length ? { pets: payload.pets } : {}),
+      ...(payload.petSchemes?.length
+        ? { petSchemes: payload.petSchemes }
+        : {}),
     });
   }
   return JSON.stringify(payload);
@@ -935,31 +1023,8 @@ export async function packToken(json: string, prefix: string): Promise<string> {
 /** Pull the first COA-* token out of pasted text (whitespace / labels ignored). */
 export function extractPackedToken(text: string): string {
   const compact = text.replace(/\s+/g, "");
-  const match = compact.match(/COA-(?:CS|IS|DS)1\.[zu]\.[A-Za-z0-9_-]+/i);
+  const match = compact.match(/COA-(?:CS|IS|DS|PS)1\.[zu]\.[A-Za-z0-9_-]+/i);
   return match ? match[0] : compact;
-}
-
-export async function unpackToken(
-  text: string,
-  expectedPrefix: string,
-): Promise<unknown | null> {
-  const raw = extractPackedToken(text);
-  const prefix = `${expectedPrefix}.`;
-  if (!raw.toUpperCase().startsWith(prefix.toUpperCase())) return null;
-  const body = raw.slice(prefix.length);
-  const dot = body.indexOf(".");
-  if (dot < 0) return null;
-  const kind = body.slice(0, dot).toLowerCase();
-  const data = body.slice(dot + 1);
-  if (!data) return null;
-  try {
-    let bytes = fromBase64Url(data);
-    if (kind === "z") bytes = await inflate(bytes);
-    else if (kind !== "u") return null;
-    return JSON.parse(new TextDecoder().decode(bytes));
-  } catch {
-    return null;
-  }
 }
 
 function mergeCatalogAdds(
@@ -971,6 +1036,8 @@ function mergeCatalogAdds(
   insigniaSchemes: InsigniaScheme[],
   decks: DeckPiece[],
   deckSchemes: DeckScheme[],
+  pets: PetPiece[],
+  petSchemes: PetScheme[],
   knownEquipmentIds: Set<string>,
   knownItemIds: Set<string>,
   knownCircuitIds: Set<string>,
@@ -979,6 +1046,8 @@ function mergeCatalogAdds(
   knownInsigniaSchemeIds: Set<string>,
   knownDeckIds: Set<string>,
   knownDeckSchemeIds: Set<string>,
+  knownPetIds: Set<string>,
+  knownPetSchemeIds: Set<string>,
   hiddenEquipmentIds: Set<string>,
   hiddenItemIds: Set<string>,
 ): Pick<
@@ -991,6 +1060,8 @@ function mergeCatalogAdds(
   | "insigniaSchemesToAdd"
   | "decksToAdd"
   | "deckSchemesToAdd"
+  | "petsToAdd"
+  | "petSchemesToAdd"
   | "unhideEquipmentIds"
   | "unhideItemIds"
 > {
@@ -1043,6 +1114,15 @@ function mergeCatalogAdds(
     if (!knownDeckSchemeIds.has(scheme.id)) deckSchemesToAdd.push(scheme);
   }
 
+  const petsToAdd: PetPiece[] = [];
+  for (const piece of pets) {
+    if (!knownPetIds.has(piece.id)) petsToAdd.push(piece);
+  }
+  const petSchemesToAdd: PetScheme[] = [];
+  for (const scheme of petSchemes) {
+    if (!knownPetSchemeIds.has(scheme.id)) petSchemesToAdd.push(scheme);
+  }
+
   return {
     equipmentToAdd,
     itemsToAdd,
@@ -1052,9 +1132,34 @@ function mergeCatalogAdds(
     insigniaSchemesToAdd,
     decksToAdd,
     deckSchemesToAdd,
+    petsToAdd,
+  petSchemesToAdd,
     unhideEquipmentIds,
     unhideItemIds,
   };
+}
+
+export async function unpackToken(
+  text: string,
+  expectedPrefix: string,
+): Promise<unknown | null> {
+  const raw = extractPackedToken(text);
+  const prefix = `${expectedPrefix}.`;
+  if (!raw.toUpperCase().startsWith(prefix.toUpperCase())) return null;
+  const body = raw.slice(prefix.length);
+  const dot = body.indexOf(".");
+  if (dot < 0) return null;
+  const kind = body.slice(0, dot).toLowerCase();
+  const data = body.slice(dot + 1);
+  if (!data) return null;
+  try {
+    let bytes = fromBase64Url(data);
+    if (kind === "z") bytes = await inflate(bytes);
+    else if (kind !== "u") return null;
+    return JSON.parse(new TextDecoder().decode(bytes));
+  } catch {
+    return null;
+  }
 }
 
 function combatStatsEqual(a: CombatStats, b: CombatStats): boolean {
@@ -1162,6 +1267,8 @@ function emptyCatalogAdds(): Pick<
   | "insigniaSchemesToAdd"
   | "decksToAdd"
   | "deckSchemesToAdd"
+  | "petsToAdd"
+  | "petSchemesToAdd"
   | "unhideEquipmentIds"
   | "unhideItemIds"
 > {
@@ -1174,6 +1281,8 @@ function emptyCatalogAdds(): Pick<
     insigniaSchemesToAdd: [],
     decksToAdd: [],
     deckSchemesToAdd: [],
+    petsToAdd: [],
+    petSchemesToAdd: [],
     unhideEquipmentIds: [],
     unhideItemIds: [],
   };
@@ -1197,6 +1306,8 @@ export function prepareShareImport(
   knownInsigniaSchemeIds: Set<string> = new Set(),
   knownDeckIds: Set<string> = new Set(),
   knownDeckSchemeIds: Set<string> = new Set(),
+  knownPetIds: Set<string> = new Set(),
+  knownPetSchemeIds: Set<string> = new Set(),
 ): ShareImportResult {
   const now = new Date().toISOString();
   const claimedIds = new Set<string>();
@@ -1304,6 +1415,8 @@ export function prepareShareImport(
     insigniaSchemes: InsigniaScheme[] = [],
     decks: DeckPiece[] = [],
     deckSchemes: DeckScheme[] = [],
+    pets: PetPiece[] = [],
+    petSchemes: PetScheme[] = [],
   ): ShareImportResult => {
     // Local ids already taken by stored profiles (or claimed this pass).
     const usedIds = new Set(existingProfiles.map((p) => p.id));
@@ -1348,6 +1461,8 @@ export function prepareShareImport(
         insigniaSchemes,
         decks,
         deckSchemes,
+        pets,
+        petSchemes,
         knownEquipmentIds,
         knownItemIds,
         knownCircuitIds,
@@ -1356,6 +1471,8 @@ export function prepareShareImport(
         knownInsigniaSchemeIds,
         knownDeckIds,
         knownDeckSchemeIds,
+        knownPetIds,
+        knownPetSchemeIds,
         hiddenEquipmentIds,
         hiddenItemIds,
       ),
@@ -1373,6 +1490,8 @@ export function prepareShareImport(
       payload.insigniaSchemes ?? [],
       payload.decks ?? [],
       payload.deckSchemes ?? [],
+      payload.pets ?? [],
+      payload.petSchemes ?? [],
     );
   }
 
@@ -1387,6 +1506,8 @@ export function prepareShareImport(
     payload.insigniaSchemes ?? [],
     payload.decks ?? [],
     payload.deckSchemes ?? [],
+    payload.pets ?? [],
+    payload.petSchemes ?? [],
   );
 }
 

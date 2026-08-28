@@ -64,7 +64,8 @@
     "bossDamage": "頭目傷害",
     "statusDamage": "異常傷害",
     "strInt": "力量智力",
-    "agiSpr": "敏捷精神"
+    "agiSpr": "敏捷精神",
+    "additionalDamage": "附加傷害"
   },
   "insigniaRarity": {
     "epic": "史詩",
@@ -96,7 +97,9 @@
     "int": "智力",
     "otherworld": "異界傷害",
     "resonanceCharge": "共鳴充能",
-    "petDamage": "寵物增傷"
+    "petDamage": "寵物增傷",
+    "allElementDamage": "全屬性傷害",
+    "additionalDamage": "附加傷害"
   },
   "slot": {},
   "catalogStat": {
@@ -665,7 +668,12 @@
         "name"
       ]
     },
-    "sockets11": "11 格鑲嵌",
+    "socketsLabel": {
+      "tpl": "{n} 格鑲嵌",
+      "args": [
+        "n"
+      ]
+    },
     "unsocketed": "— 未鑲嵌 —",
     "moveHere": "（改裝至此）",
     "subCount": {
@@ -905,8 +913,8 @@
     "shareBoxHintInsignia": "匯出目前方案（含已鑲嵌的徽記）為一串壓縮字串。導入後會新增方案並套用到目前角色配置，用該角色自己的裝備與數值計算傷害，不會覆蓋對方的基底屬性。",
     "shareBoxPlaceholderCircuit": "貼上 COA-CS1 開頭的字串，或按「匯出字串」產生",
     "shareBoxPlaceholderInsignia": "貼上 COA-IS1 開頭的字串，或按「匯出字串」產生",
-    "profileShareHint": "貼上隊友的迴路或徽記方案字串，會新增方案並套用到這份角色配置。傷害用此角色目前的基底、裝備與道具計算，不會改寫對方或你的角色數值。",
-    "profileSharePlaceholder": "貼上 COA-CS1 或 COA-IS1 開頭的字串",
+    "profileShareHint": "貼上隊友的迴路、徽記、牌組或寵物方案字串，會新增方案並套用到這份角色配置。傷害用此角色目前的基底、裝備與道具計算，不會改寫對方或你的角色數值。",
+    "profileSharePlaceholder": "貼上 COA-CS1、COA-IS1、COA-DS1 或 COA-PS1 開頭的字串",
     "copiedKind": {
       "tpl": "已複製{kind}字串（{n} 字）",
       "args": [
@@ -1275,7 +1283,108 @@
         "profile"
       ]
     },
-    "badDeckCode": "無效的牌組方案代碼"
+    "badDeckCode": "無效的牌組方案代碼",
+    "tabPets": "寵物",
+    "tabPetsShort": "寵物",
+    "petScheme": "寵物方案",
+    "noPetScheme": "無",
+    "petSchemeWord": "寵物方案",
+    "petLib": "寵物庫",
+    "allPets": "所有寵物",
+    "noPets": "尚無寵物 — 新增你的第一隻。",
+    "searchPets": "搜尋寵物",
+    "petSchemes": "寵物方案",
+    "petSchemeHint": "最多裝備 2 隻寵物，各自提供加成。",
+    "noPetSchemes": "尚無寵物方案。",
+    "petGainTitle": "寵物增益",
+    "petGainHintWith": "目前裝備寵物方案的傷害增益。",
+    "petGainHintEmpty": "裝備或選擇寵物方案以查看增益。",
+    "editPet": "編輯寵物",
+    "addPet": "新增寵物",
+    "petFormHint": "寵物提供屬性加成，最多 6 條效果。",
+    "autoNamePetPh": "自動以寵物名稱命名",
+    "petAffixHint": "寵物裝備後，其效果會被加入。",
+    "petNotePh": "例如來源、未計入的等級 +1",
+    "deckNotePh": "例如來源、未計入的牌組效果",
+    "previewNoPet": "未裝備寵物",
+    "previewPetGain": "含寵物",
+    "noPetDamage": "尚未計算寵物貢獻值：請將寵物裝入上方 2 個插槽。",
+    "notSocketedPet": "尚未裝入寵物。將寵物裝入上方插槽後，此處會顯示該寵物單獨能貢獻的傷害。",
+    "noneForPetSlot": "庫中尚無可放入的寵物",
+    "addedPetScheme": "已新增寵物方案",
+    "copiedPetScheme": "已複製寵物方案",
+    "deletedPetScheme": "已刪除寵物方案",
+    "updatedPet": {
+      "tpl": "寵物「{name}」已更新",
+      "args": [
+        "name"
+      ]
+    },
+    "addedPet": {
+      "tpl": "已新增寵物「{name}」",
+      "args": [
+        "name"
+      ]
+    },
+    "deletedPet": {
+      "tpl": "已刪除寵物「{name}」",
+      "args": [
+        "name"
+      ]
+    },
+    "copiedPet": {
+      "tpl": "已複製寵物「{name}」",
+      "args": [
+        "name"
+      ]
+    },
+    "pickProfilePetCompare": "選擇配置以比較寵物增益",
+    "addPetToCompare": "在庫中新增寵物以比較增益",
+    "petCodeWrongTab": "此寵物代碼屬於寵物分頁。",
+    "exportPet": "匯出寵物",
+    "exportPetTitle": "將目前寵物方案複製為分享代碼",
+    "noPetOnThis": "此配置無寵物方案",
+    "noPetOnProfile": "目前配置無寵物方案",
+    "importedPet": {
+      "tpl": "已將寵物方案「{name}」套用到配置「{profile}」",
+      "args": [
+        "name",
+        "profile"
+      ]
+    },
+    "badPetCode": "無效的寵物方案代碼",
+    "shareBoxHintPet": "匯出此配置目前套用的寵物方案為一串壓縮字串。導入後會新增方案並套用到此角色配置，用該角色自己的裝備與數值計算傷害。",
+    "shareBoxPlaceholderPet": "貼上寵物方案字串（COA-PS1…）",
+    "shareBoxHintDeck": "匯出目前牌組方案（含已裝備的牌組卡）為一串壓縮字串。導入後會新增方案並套用到目前角色配置，用該角色自己的裝備與數值計算傷害，不會覆蓋對方的基底屬性。",
+    "shareBoxPlaceholderDeck": "貼上牌組方案字串（COA-DS1…）",
+    "tabRankings": "傷害排行榜",
+    "tabRankingsShort": "排行",
+    "rankTitle": "傷害排行榜",
+    "rankHint": "手動填寫名稱與 90 秒訓練場總傷害，依傷害由高到低排序。",
+    "rankName": "名稱",
+    "rankNamePh": "例如：隊友 A",
+    "rankDamage": "90 秒訓練場傷害",
+    "rankDamagePh": "例如 123456789",
+    "rankAdd": "新增成績",
+    "rankNoEntries": "尚無成績，新增第一筆。",
+    "rankRank": "排名",
+    "rankPerSecond": "/ 秒",
+    "rankDps": "每秒傷害",
+    "rankEdit": "編輯",
+    "rankDelete": "刪除",
+    "rankCancel": "取消",
+    "rankSave": "儲存",
+    "rankConfirmDelete": {
+      "tpl": "刪除「{name}」的成績？",
+      "args": [
+        "name"
+      ]
+    },
+    "rankAdded": "已新增成績",
+    "rankUpdated": "已更新成績",
+    "rankDeleted": "已刪除成績",
+    "rankNeedName": "請輸入名稱",
+    "rankNeedDamage": "請輸入 90 秒訓練場傷害"
   },
   "meta": {
     "htmlLang": "zh-Hant",
